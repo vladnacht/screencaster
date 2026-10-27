@@ -34,9 +34,18 @@ export function parseDotenv(text: string): Record<string, string> {
   return out;
 }
 
+/** JSON.parse errors quote the input, which holds passwords here: name the source only. */
+function parseAccounts(text: string, source: string): AccountMap {
+  try {
+    return JSON.parse(text) as AccountMap;
+  } catch {
+    throw new Error(`JSON invalide dans ${source} (contenu masqué).`);
+  }
+}
+
 function readJson(file: string): AccountMap {
   if (!fs.existsSync(file)) return {};
-  const data = JSON.parse(fs.readFileSync(file, "utf8")) as AccountMap;
+  const data = parseAccounts(fs.readFileSync(file, "utf8"), file);
   return Object.fromEntries(
     Object.entries(data).filter(([, a]) => a && typeof a.username === "string" && typeof a.password === "string"),
   );
@@ -46,7 +55,7 @@ function sources(projectDir: string): { source: string; accounts: () => AccountM
   return [
     {
       source: "env DEMO_AGENT_ACCOUNTS",
-      accounts: () => (process.env.DEMO_AGENT_ACCOUNTS ? (JSON.parse(process.env.DEMO_AGENT_ACCOUNTS) as AccountMap) : {}),
+      accounts: () => (process.env.DEMO_AGENT_ACCOUNTS ? parseAccounts(process.env.DEMO_AGENT_ACCOUNTS, "DEMO_AGENT_ACCOUNTS") : {}),
     },
     { source: ".demo-agent/accounts.json (projet)", accounts: () => readJson(path.join(projectDir, ".demo-agent", "accounts.json")) },
     { source: "~/.demo-agent/accounts.json", accounts: () => readJson(path.join(os.homedir(), ".demo-agent", "accounts.json")) },

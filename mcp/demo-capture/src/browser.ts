@@ -1,3 +1,5 @@
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { DEMO_INIT_SCRIPT } from "./overlay.js";
 
@@ -15,6 +17,11 @@ export interface TargetInfo {
 }
 
 export const DEFAULT_CDP_URL = process.env.DEMO_AGENT_CDP_URL ?? "http://127.0.0.1:9222";
+
+/** A URL as is, else a local path as a file:// URL (Windows drive, spaces and `#` escaped). */
+export function toUrl(input: string): string {
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : pathToFileURL(path.resolve(input)).href;
+}
 
 /** Tabs of a Chrome started with `--remote-debugging-port` (see scripts/chrome-debug). */
 export async function listChromeTabs(cdpUrl = DEFAULT_CDP_URL): Promise<TargetInfo[]> {
