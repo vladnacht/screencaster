@@ -7,7 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import * as act from "./actions.js";
-import { DEFAULT_CDP_URL, listChromeTabs, Session } from "./browser.js";
+import { DEFAULT_CDP_URL, listChromeTabs, Session, toUrl } from "./browser.js";
 import { checkFfmpeg, defaultVideoOptions, encodeVideo, extractFrames, extractPoster, optimizePng } from "./encode.js";
 import { buildBaseName, outputDir, outputRoot, uniquePath } from "./naming.js";
 import { DEFAULT_HIDE_SELECTORS } from "./overlay.js";
@@ -146,8 +146,7 @@ server.registerTool(
     const hide = [...DEFAULT_HIDE_SELECTORS, ...a.hideSelectors];
     if (a.source === "launch") {
       if (!a.url) throw new Error("url requise en mode launch.");
-      const url = /^[a-z]+:\/\//i.test(a.url) ? a.url : `file://${path.resolve(a.url)}`;
-      session = await Session.launch({ url, viewport: { width: a.width, height: a.height }, headless: a.headless, storageState: a.storageState, hideSelectors: hide });
+      session = await Session.launch({ url: toUrl(a.url), viewport: { width: a.width, height: a.height }, headless: a.headless, storageState: a.storageState, hideSelectors: hide });
     } else {
       session = await Session.attach({ cdpUrl: a.cdpUrl ?? DEFAULT_CDP_URL, targetId: a.targetId, match: a.match, hideSelectors: hide });
     }
@@ -448,7 +447,8 @@ server.registerTool(
       const size = await optimizePng(raw, out);
       files.push({ file: out, size: human(size), sizeBytes: size, ...dim });
     }
-    const stem = files[0].file.replace(/(_\d+)?_\d+x\d+(_\d+)?\.png$/, "");
+    // Named after the first PNG, which uniquePath already made unique: a second batch in the same minute keeps its own meta.
+    const stem = files[0].file.slice(0, -".png".length);
     Object.assign(meta, { files: files.map((f) => ({ file: path.basename(f.file), sizeBytes: f.sizeBytes, width: f.width, height: f.height })) });
     fs.writeFileSync(`${stem}.meta.json`, JSON.stringify(meta, null, 2));
     shots = [];
