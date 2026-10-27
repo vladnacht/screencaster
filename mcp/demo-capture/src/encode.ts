@@ -47,9 +47,12 @@ export async function probeDuration(file: string): Promise<number> {
   return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
 }
 
+/** No video ever leaves finalize above this, whatever maxMb or the duration. */
+export const HARD_MAX_MB = 10;
+
 export interface VideoOptions {
   format: "mp4" | "mkv";
-  /** Hard ceiling on the output size, in MB. */
+  /** Target ceiling on the output size, in MB; clamped to HARD_MAX_MB. */
   maxMb: number;
   fps: number;
   maxWidth: number;
@@ -87,6 +90,8 @@ export interface EncodeResult {
   sizeBytes: number;
   durationSec: number;
   passes: 1 | 2;
+  /** The ceiling actually applied, after clamping. */
+  maxMb: number;
   /** Width/fps actually used (lower than requested when the size cap forced it). */
   width: number;
   fps: number;
@@ -108,26 +113,34 @@ async function twoPass(input: string, output: string, o: VideoOptions, kbps: num
 
 /**
  * Re-encode a raw recording into a small H.264 file. CRF first; if the result is
- * still above `maxMb`, redo it in two passes at the bitrate that fits, stepping the
- * width and fps down when even that bitrate cannot hold the content.
+ * above the ceiling, redo it in two passes at the bitrate that fits, and keep lowering
+ * bitrate, width and fps until it does. Throws rather than deliver an oversized file.
  */
 export async function encodeVideo(input: string, output: string, o: VideoOptions): Promise<EncodeResult> {
+  const maxMb = o.maxMb > 0 ? Math.min(o.maxMb, HARD_MAX_MB) : HARD_MAX_MB;
+  const limit = maxMb * 1024 * 1024;
   await runFfmpeg([...trimArgs(o), "-i", input, "-vf", videoFilter(o), ...x264, "-crf", String(o.crf), ...containerArgs(o), output]);
 
   let size = fs.statSync(output).size;
   const durationSec = await probeDuration(output);
-  const limit = o.maxMb * 1024 * 1024;
-  if (size <= limit) return { file: output, sizeBytes: size, durationSec, passes: 1, width: o.maxWidth, fps: o.fps };
+  if (size <= limit) return { file: output, sizeBytes: size, durationSec, passes: 1, maxMb, width: o.maxWidth, fps: o.fps };
 
-  const kbps = Math.max(100, Math.floor((limit * 8 * 0.9) / durationSec / 1000));
+  // No bitrate floor: a long video needs a very low one to fit.
+  let kbps = (limit * 8 * 0.9) / durationSec / 1000;
   let cur = { ...o };
-  for (;;) {
-    await twoPass(input, output, cur, kbps);
+  for (let attempt = 1; ; attempt++) {
+    await twoPass(input, output, cur, Math.max(1, Math.floor(kbps)));
     size = fs.statSync(output).size;
-    if (size <= limit || cur.maxWidth <= 640) break;
-    cur = { ...cur, maxWidth: Math.round((cur.maxWidth * 0.75) / 2) * 2, fps: Math.max(8, cur.fps - 3) };
+    if (size <= limit) break;
+    if (attempt === 8) {
+      fs.rmSync(output, { force: true });
+      throw new Error(`Impossible de descendre sous ${maxMb} Mo (${(size / 1048576).toFixed(1)} Mo à ${cur.maxWidth}px ${cur.fps} fps) : coupe la vidéo avec trimStart/trimEnd.`);
+    }
+    // x264 overshoots tiny bitrates (per-frame overhead): aim lower and shrink the picture.
+    kbps *= (limit / size) * 0.9;
+    cur = { ...cur, maxWidth: Math.max(320, Math.round((cur.maxWidth * 0.75) / 2) * 2), fps: Math.max(5, cur.fps - 3) };
   }
-  return { file: output, sizeBytes: size, durationSec: await probeDuration(output), passes: 2, width: cur.maxWidth, fps: cur.fps };
+  return { file: output, sizeBytes: size, durationSec: await probeDuration(output), passes: 2, maxMb, width: cur.maxWidth, fps: cur.fps };
 }
 
 /** Small PNG thumbnail taken at `atSec`. */

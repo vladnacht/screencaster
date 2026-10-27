@@ -73,7 +73,7 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
   2026-10-27_1435_athena_export-csv_shot_1440x900.png
 ```
 
-**Poids** : H.264 CRF 28 à 15 fps, largeur plafonnée à 1280 px, sans audio, `faststart`. Une démo de 30 s pèse en général quelques centaines de Ko. Si le fichier dépasse le plafond (8 Mo par défaut, compatible avec un upload dans une PR GitHub), il est ré-encodé en 2 passes au débit qui tient. Si ça ne suffit toujours pas, la résolution et le fps baissent par paliers.
+**Poids** : une vidéo ne dépasse **jamais 10 Mo**, quelle que soit sa durée. H.264 CRF 28 à 15 fps, largeur plafonnée à 1280 px, sans audio, `faststart`. Une démo de 30 s pèse en général quelques centaines de Ko. Si le fichier dépasse le plafond (8 Mo par défaut, réglable jusqu'à 10 Mo, compatible avec un upload dans une PR GitHub), il est ré-encodé en 2 passes au débit qui tient. Si ça ne suffit pas, le débit, la résolution (jusqu'à 320 px) et le fps (jusqu'à 5) baissent par paliers. Si même ça ne passe pas (plusieurs heures de vidéo), `finalize` échoue plutôt que de livrer un fichier trop lourd.
 
 ## Options et variables
 
@@ -81,14 +81,14 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
 |---|---|
 | `--video` / `--shot` | force le mode (sinon le planner choisit) |
 | `--mkv` | conteneur MKV au lieu de MP4 |
-| `--max-mb N` | plafond de poids de la vidéo |
+| `--max-mb N` | plafond de poids de la vidéo (10 Mo au maximum) |
 | `--mobile` | viewport 390×844 |
 | `--headed` | navigateur visible pendant la prise |
 
 | Variable | Défaut |
 |---|---|
 | `DEMO_AGENT_OUTPUT_DIR` | `~/Documents/Demos` |
-| `DEMO_AGENT_MAX_MB` | `8` |
+| `DEMO_AGENT_MAX_MB` | `8` (plafonné à 10) |
 | `DEMO_AGENT_CDP_URL` | `http://127.0.0.1:9222` |
 | `DEMO_AGENT_STEP_PAUSE_MS` | `600` (pause après chaque action) |
 | `DEMO_AGENT_FFMPEG` | ffmpeg-static, sinon `ffmpeg` du PATH |
@@ -97,7 +97,7 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
 ## Développement
 
 ```bash
-cd mcp/demo-capture && npm test     # nommage, dossier Documents, poids, 2 passes
+cd mcp/demo-capture && npm test     # nommage, dossier Documents, poids, 2 passes, plafond de 10 Mo
 node scripts/e2e.mjs                # navigateur lancé : enregistrement, capture, finalisation
 node scripts/e2e-chrome.mjs         # onglet Chrome attaché : liste, ambiguïté, détachement
 ```

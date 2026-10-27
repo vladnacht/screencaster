@@ -85,7 +85,7 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.1.0" });
+const server = new McpServer({ name: "demo-capture", version: "0.1.1" });
 
 server.registerTool(
   "check_setup",
@@ -385,7 +385,7 @@ server.registerTool(
       description: z.string(),
       rawFiles: z.array(z.string()).optional(),
       format: z.enum(["mp4", "mkv"]).default("mp4"),
-      maxMb: z.number().positive().optional(),
+      maxMb: z.number().positive().optional().describe("Plafond de poids en Mo (8 par défaut, jamais plus de 10)"),
       trimStart: z.number().min(0).optional(),
       trimEnd: z.number().min(0).optional(),
       posterAt: z.number().min(0).optional().describe("Instant (s) de la vignette sur l'enregistrement brut ; défaut : dernière étape"),
@@ -429,7 +429,7 @@ server.registerTool(
       const poster = await extractPoster(out, `${stem}.poster.png`, Math.min(Math.max(0, posterAt), enc.durationSec - 0.1));
       Object.assign(meta, {
         file: path.basename(out), viewport: vp, durationSec: Number(enc.durationSec.toFixed(2)),
-        sizeBytes: enc.sizeBytes, encoding: { passes: enc.passes, maxMb: opts.maxMb, fps: enc.fps, maxWidth: enc.width }, steps,
+        sizeBytes: enc.sizeBytes, encoding: { passes: enc.passes, maxMb: enc.maxMb, fps: enc.fps, maxWidth: enc.width }, steps,
       });
       fs.writeFileSync(`${stem}.meta.json`, JSON.stringify(meta, null, 2));
       return { file: out, size: human(enc.sizeBytes), durationSec: meta.durationSec, poster, meta: `${stem}.meta.json`, passes: enc.passes };
