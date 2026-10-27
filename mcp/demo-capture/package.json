@@ -1,6 +1,6 @@
 {
   "name": "demo-capture",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server: drive a browser tab, record it to a lightweight MP4/MKV, take screenshots.",
   "type": "module",
   "private": true,

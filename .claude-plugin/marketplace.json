@@ -1,13 +1,13 @@
 {
   "name": "demo-agent",
   "owner": { "name": "Kamal NASSIROU", "email": "vladnacht@gmail.com" },
-  "metadata": { "description": "Marketplace locale du plugin demo-agent", "version": "0.1.0" },
+  "metadata": { "description": "Marketplace locale du plugin demo-agent", "version": "0.1.1" },
   "plugins": [
     {
       "name": "demo-agent",
       "source": "./",
       "description": "Vidéos de démo et screenshots pilotés par sous-agents",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }
