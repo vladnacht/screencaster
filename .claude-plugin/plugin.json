@@ -1,0 +1,26 @@
+{
+  "name": "demo-agent",
+  "version": "0.1.0",
+  "description": "Vidéos de démo (MP4/MKV légers) et screenshots d'une fonctionnalité web ou d'un onglet Chrome, pilotés par des sous-agents : cible, scénario, prise de vue, relecture.",
+  "author": {
+    "name": "Kamal NASSIROU",
+    "email": "vladnacht@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "demo",
+    "video",
+    "screenshot",
+    "playwright",
+    "screencast",
+    "mcp"
+  ],
+  "mcpServers": {
+    "demo-capture": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp/demo-capture/launch.mjs"
+      ]
+    }
+  }
+}
