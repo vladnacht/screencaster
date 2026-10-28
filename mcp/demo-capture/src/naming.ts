@@ -54,8 +54,8 @@ export function buildBaseName(p: NameParts): string {
  * Root folder for every demo: `$SCREENCASTER_OUTPUT_DIR`, else `<home>/Documents/Demos`.
  * `home` is injectable for tests.
  */
-export function outputRoot(env: NodeJS.ProcessEnv = process.env, home: string = os.homedir()): string {
-  if (env.SCREENCASTER_OUTPUT_DIR) return path.resolve(env.SCREENCASTER_OUTPUT_DIR);
+export function outputRoot(dir: string | undefined = process.env.SCREENCASTER_OUTPUT_DIR, home: string = os.homedir()): string {
+  if (dir) return path.resolve(dir);
   return path.join(home, "Documents", "Demos");
 }
 
