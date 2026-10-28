@@ -85,7 +85,7 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.2.0" });
+const server = new McpServer({ name: "demo-capture", version: "0.3.0" });
 
 server.registerTool(
   "check_setup",

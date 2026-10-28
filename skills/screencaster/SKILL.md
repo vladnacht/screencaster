@@ -1,51 +1,53 @@
 ---
 name: screencaster
-description: Produit une vidéo de démo (MP4/MKV léger) ou des screenshots PNG d'une fonctionnalité web ou d'un onglet du navigateur, à partir d'une simple description, avec des sous-agents spécialisés (cible, scénario, prise de vue, relecture). À utiliser quand l'utilisateur tape /screencaster ou demande de « filmer », « enregistrer une démo », « faire une vidéo de la feature », « capturer l'onglet X », « screenshot de la page Y ».
+description: Produces a lightweight demo video (MP4/MKV) or PNG screenshots of a web feature or a browser tab from a plain description, with specialized subagents (target, script, capture, review). Use when the user types /screencaster or asks to record a demo, film a feature, make a video of a flow, capture or screenshot a tab or a page (also in other languages, e.g. « filmer », « enregistrer une démo », « capturer l'onglet »).
 argument-hint: "<description> [--video|--shot] [--mkv] [--max-mb N] [--mobile] [--headed]"
 ---
 
-# /screencaster : orchestrateur
+# /screencaster: orchestrator
 
-Tu coordonnes 4 sous-agents et le serveur MCP **demo-capture**. Tu gardes un **brief** JSON (description, options, target, plan, capture, review, retakes) que tu complètes à chaque étape et que tu transmets **en entier** dans le prompt de chaque sous-agent : ils ne voient pas cette conversation.
+You coordinate 4 subagents and the **demo-capture** MCP server. You keep a JSON **brief** (description, language, options, target, plan, capture, review, retakes) that you fill in at each step and pass **in full** in each subagent's prompt: they do not see this conversation.
 
-Demande : `$ARGUMENTS`
+Request: `$ARGUMENTS`
 
-## 0. Préparer
-- Lis les options dans la demande : `--video` / `--shot` → `forceMode` ; `--mkv` → `format: "mkv"` ; `--max-mb N` → `maxMb` (10 au maximum : le serveur ne livre jamais une vidéo de plus de 10 Mo) ; `--mobile` → viewport 390×844 ; `--headed` → navigateur visible.
-- `projectDir` = le dossier de travail courant.
-- Appelle `check_setup` (au premier usage, il télécharge ffmpeg et parfois Chromium : préviens l'utilisateur que ça peut prendre une minute). Il renvoie `pluginRoot` et `chromeDebugScript` : ne cherche jamais le dossier du plugin sur le disque. Si ffmpeg manque, dis à l'utilisateur de lancer une fois `node <pluginRoot>/scripts/setup.mjs`, puis de relancer Claude Code. Arrête-toi là. Si l'outil `check_setup` n'existe pas du tout, le serveur MCP n'a pas démarré : demande à l'utilisateur de relancer Claude Code (la première installation prend quelques secondes).
+**Language**: reply to the user in the language of their request. Put it in the brief as `language` (e.g. `"fr"`, `"en"`), so captions and slugs follow it.
 
-## 1. Cible : sous-agent `screencaster:target-resolver`
-Transmets `description` et `projectDir`.
-- `blocked: "chrome-debug"` : si la demande contient une URL, ne bloque pas : relance le resolver en lui imposant `source: launch`. Sinon, donne à l'utilisateur la commande `chromeDebugScript` (renvoyée par `check_setup`), dis-lui d'ouvrir l'onglet dans cette fenêtre puis de relancer, et arrête-toi.
-- `confidence` < 0.8 ou plusieurs `candidates` : demande à l'utilisateur de choisir (AskUserQuestion, un onglet ou une URL par option).
-- `serverRunning: false` : propose de lancer `startCommand` en arrière-plan (Bash `run_in_background`). Attends que l'URL réponde avant de continuer.
+## 0. Prepare
+- Read the options in the request: `--video` / `--shot` → `forceMode`; `--mkv` → `format: "mkv"`; `--max-mb N` → `maxMb` (10 at most: the server never delivers a video over 10 MB); `--mobile` → 390×844 viewport; `--headed` → visible browser.
+- `projectDir` = the current working directory.
+- Call `check_setup` (on first use it downloads ffmpeg, and sometimes Chromium: tell the user it can take a minute). It returns `pluginRoot` and `chromeDebugScript`: never search the disk for the plugin folder. If ffmpeg is missing, tell the user to run `node <pluginRoot>/scripts/setup.mjs` once, then restart Claude Code, and stop there. If the `check_setup` tool does not exist at all, the MCP server did not start: ask the user to restart Claude Code (the first install takes a few seconds).
 
-## 2. Plan : sous-agent `screencaster:demo-planner`
-Transmets le brief (description, options, target, projectDir).
-- `risks` non vide : montre chaque risque à l'utilisateur et demande son accord avant de continuer.
-- Sinon, annonce en une ligne le mode choisi, le nombre d'étapes et la durée visée, puis enchaîne sans attendre.
+## 1. Target: subagent `screencaster:target-resolver`
+Pass `description` and `projectDir`.
+- `blocked: "chrome-debug"`: if the request contains a URL, do not block: run the resolver again and require `source: launch`. Otherwise give the user the `chromeDebugScript` command (from `check_setup`), tell them to open the tab in that window and try again, and stop.
+- `confidence` < 0.8 or several `candidates`: ask the user to choose (AskUserQuestion, one tab or URL per option).
+- `serverRunning: false`: offer to run `startCommand` in the background (Bash `run_in_background`). Wait until the URL answers before going on.
 
-## 3. Prise de vue : sous-agent `screencaster:capture-operator`
-Transmets le brief (target, plan, projectDir, options `headed`, et `retakeIssues` s'il y en a). L'opérateur joue toute la prise en un seul appel `run_storyboard` : pas de temps morts, et les états brefs sont attrapés.
-- `status: "failed"` : une seule nouvelle tentative avec l'erreur dans `retakeIssues`. Si elle échoue aussi, rapporte l'erreur à l'utilisateur, appelle `close_target` et arrête-toi.
+## 2. Plan: subagent `screencaster:demo-planner`
+Pass the brief (description, language, options, target, projectDir).
+- `risks` not empty: show each risk to the user and ask for their approval before going on.
+- Otherwise state in one line the chosen mode, the number of steps and the target length, then go on without waiting.
 
-## 4. Relecture : sous-agent `screencaster:media-reviewer`
-Transmets description, plan et capture.
-- `verdict: "retake"` et moins de 2 reprises déjà faites : retourne à l'étape 3 avec `retakeIssues` = `issues` + `retakeHints`.
-- `secretsVisible: true` : **ne finalise pas**. Préviens l'utilisateur et propose une nouvelle prise.
-- Après 2 reprises toujours en `retake` : finalise quand même, et liste clairement les problèmes restants.
+## 3. Capture: subagent `screencaster:capture-operator`
+Pass the brief (target, plan, projectDir, the `headed` option, and `retakeIssues` if any). The operator plays the whole take in a single `run_storyboard` call: no dead time, and short states are caught.
+- `status: "failed"`: one more attempt with the error in `retakeIssues`. If it fails again, report the error to the user, call `close_target` and stop.
 
-## 5. Finaliser (outil `finalize`, pas de sous-agent)
-- Vidéo : `kind: "video"`, `project` = `target.project`, `featureSlug` = `plan.featureSlug`, `description`, `format`, `maxMb`, `trimStart`, `trimEnd` et `posterAt` (repris tels quels du reviewer : ils portent sur l'enregistrement brut), `qa: { verdict, issues }`.
-- Screenshots : `kind: "shot"` avec les mêmes `project` / `featureSlug`, et `rawFiles` = `capture.rawShots`.
-- Mode `both` : les deux appels.
-- Puis `close_target`.
+## 4. Review: subagent `screencaster:media-reviewer`
+Pass description, plan and capture.
+- `verdict: "retake"` and fewer than 2 retakes so far: go back to step 3 with `retakeIssues` = `issues` + `retakeHints`.
+- `secretsVisible: true`: **do not finalize**. Warn the user and offer a new take.
+- Still `retake` after 2 retakes: finalize anyway, and list the remaining problems clearly.
 
-## 6. Rendre compte
-Pour chaque fichier, donne en quelques lignes le chemin complet (dans `~/Documents/Demos/…` ou `$SCREENCASTER_OUTPUT_DIR`), le poids, la durée, la vignette et les éventuels problèmes signalés par la relecture. Dans un dépôt git avec une branche de fonctionnalité, propose de joindre la vidéo ou les captures à la PR. Le dépôt n'est jamais un emplacement de sortie.
+## 5. Finalize (`finalize` tool, no subagent)
+- Video: `kind: "video"`, `project` = `target.project`, `featureSlug` = `plan.featureSlug`, `description`, `format`, `maxMb`, `trimStart`, `trimEnd` and `posterAt` (copied as is from the reviewer: they refer to the raw recording), `qa: { verdict, issues }`.
+- Screenshots: `kind: "shot"` with the same `project` / `featureSlug`, and `rawFiles` = `capture.rawShots`.
+- `both` mode: both calls.
+- Then `close_target`.
 
-## Règles
-- Les sous-agents se lancent avec l'outil Agent, `subagent_type` = `screencaster:<nom>`, l'un après l'autre : chaque étape dépend de la précédente.
-- Une seule session navigateur à la fois. N'utilise pas d'autre outil navigateur pendant une démo.
-- Jamais d'identifiant en clair dans tes messages, ni dans les prompts des sous-agents.
+## 6. Report
+For each file, give in a few lines the full path (in `~/Documents/Demos/…` or `$SCREENCASTER_OUTPUT_DIR`), the size, the length, the thumbnail and any problem the review raised. In a git repository on a feature branch, offer to attach the video or screenshots to the pull request. The repository is never an output location.
+
+## Rules
+- Subagents run with the Agent tool, `subagent_type` = `screencaster:<name>`, one after the other: each step depends on the previous one.
+- One browser session at a time. Do not use any other browser tool during a demo.
+- Never write a credential in your messages or in subagent prompts.
