@@ -16,7 +16,7 @@ export interface TargetInfo {
   url: string;
 }
 
-export const DEFAULT_CDP_URL = process.env.DEMO_AGENT_CDP_URL ?? "http://127.0.0.1:9222";
+export const DEFAULT_CDP_URL = process.env.SCREENCASTER_CDP_URL ?? "http://127.0.0.1:9222";
 
 /** A URL as is, else a local path as a file:// URL (Windows drive, spaces and `#` escaped). */
 export function toUrl(input: string): string {

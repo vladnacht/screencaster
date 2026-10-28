@@ -6,9 +6,9 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
-/** `$DEMO_AGENT_FFMPEG`, else the bundled ffmpeg-static binary, else `ffmpeg` on PATH. */
+/** `$SCREENCASTER_FFMPEG`, else the bundled ffmpeg-static binary, else `ffmpeg` on PATH. */
 export function ffmpegPath(): string {
-  if (process.env.DEMO_AGENT_FFMPEG) return process.env.DEMO_AGENT_FFMPEG;
+  if (process.env.SCREENCASTER_FFMPEG) return process.env.SCREENCASTER_FFMPEG;
   try {
     const bundled = require("ffmpeg-static") as string | null;
     if (bundled && fs.existsSync(bundled)) return bundled;
@@ -23,7 +23,7 @@ export function checkFfmpeg(): string | null {
   if (r.error || r.status !== 0) {
     return "ffmpeg introuvable. Lance `node scripts/setup.mjs` dans le plugin, ou installe ffmpeg (brew install ffmpeg).";
   }
-  if (!r.stdout.includes("libx264")) return "Cet ffmpeg n'a pas libx264 : définis DEMO_AGENT_FFMPEG vers un build complet.";
+  if (!r.stdout.includes("libx264")) return "Cet ffmpeg n'a pas libx264 : définis SCREENCASTER_FFMPEG vers un build complet.";
   return null;
 }
 
@@ -63,7 +63,7 @@ export interface VideoOptions {
 
 export const defaultVideoOptions = (): VideoOptions => ({
   format: "mp4",
-  maxMb: Number(process.env.DEMO_AGENT_MAX_MB ?? 8),
+  maxMb: Number(process.env.SCREENCASTER_MAX_MB ?? 8),
   fps: 15,
   maxWidth: 1280,
   crf: 28,
@@ -98,7 +98,7 @@ export interface EncodeResult {
 }
 
 async function twoPass(input: string, output: string, o: VideoOptions, kbps: number): Promise<void> {
-  const passlog = path.join(os.tmpdir(), `demo-agent-2pass-${process.pid}-${Date.now()}`);
+  const passlog = path.join(os.tmpdir(), `screencaster-2pass-${process.pid}-${Date.now()}`);
   const nullOut = process.platform === "win32" ? "NUL" : "/dev/null";
   const common = [...trimArgs(o), "-i", input, "-vf", videoFilter(o), ...x264, "-b:v", `${kbps}k`, "-maxrate", `${kbps}k`, "-bufsize", `${kbps * 2}k`, "-passlogfile", passlog];
   try {

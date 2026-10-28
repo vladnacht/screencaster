@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -21,7 +21,7 @@ let session: Session | undefined;
 let recorder: Recorder | undefined;
 let lastRecording: { file: string; durationSec: number; steps: Step[]; viewport: { width: number; height: number }; url: string } | undefined;
 let shots: string[] = [];
-const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "demo-agent-"));
+const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "screencaster-"));
 
 const ok = (data: unknown) => ({ content: [{ type: "text" as const, text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] });
 const fail = (e: unknown) => ({ isError: true, content: [{ type: "text" as const, text: e instanceof Error ? e.message : String(e) }] });
@@ -85,14 +85,25 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.1.2" });
+const server = new McpServer({ name: "demo-capture", version: "0.2.0" });
 
 server.registerTool(
   "check_setup",
-  { description: "Vérifie ffmpeg et le dossier de sortie. À appeler une fois avant une démo." },
+  {
+    description:
+      "Vérifie ffmpeg, le navigateur et le dossier de sortie. À appeler une fois avant une démo : au premier usage, télécharge ffmpeg (et Chromium si Chrome est absent), ce qui peut prendre une minute.",
+  },
   tool(async () => {
-    const ffmpeg = checkFfmpeg();
     const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+    const setup = await import(pathToFileURL(path.join(pluginRoot, "scripts", "setup.mjs")).href);
+    let installError: string | undefined;
+    try {
+      setup.installFfmpeg();
+      setup.installBrowser();
+    } catch (e) {
+      installError = `${e instanceof Error ? e.message : e} : relance check_setup, ou lance node ${path.join(pluginRoot, "scripts", "setup.mjs")}`;
+    }
+    const ffmpeg = installError ?? checkFfmpeg();
     const script = path.join(pluginRoot, "scripts", process.platform === "win32" ? "chrome-debug.ps1" : "chrome-debug.sh");
     return { ffmpeg: ffmpeg ?? "ok", outputRoot: outputRoot(), pluginRoot, chromeDebugScript: script, chromeDebugUrl: DEFAULT_CDP_URL };
   }),
@@ -240,7 +251,7 @@ server.registerTool(
   "login",
   {
     description:
-      "Se connecte avec un compte de test. Les identifiants sont lus côté serveur (DEMO_AGENT_ACCOUNTS, .demo-agent/accounts.json, ou envFile+userKey+passKey) et ne sont jamais renvoyés.",
+      "Se connecte avec un compte de test. Les identifiants sont lus côté serveur (SCREENCASTER_ACCOUNTS, .screencaster/accounts.json, ou envFile+userKey+passKey) et ne sont jamais renvoyés.",
     inputSchema: {
       projectDir: z.string().optional(),
       account: z.string().optional().describe("Nom du compte (voir list_accounts)"),

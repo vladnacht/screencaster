@@ -1,13 +1,13 @@
-# demo-agent
+# screencaster
 
 Plugin Claude Code qui produit, à partir d'une simple description, **une vidéo de démo légère (MP4 ou MKV)** ou **des screenshots PNG** :
 - d'une fonctionnalité d'une app web (localhost, staging), avec connexion par compte de test ;
 - d'un onglet déjà ouvert dans ton Chrome.
 
 ```
-/demo filme l'export CSV que je viens d'implémenter
-/demo screenshot de l'onglet du dashboard Stripe --shot
-/demo parcours d'inscription en mobile --mobile --max-mb 5
+/screencaster filme l'export CSV que je viens d'implémenter
+/screencaster screenshot de l'onglet du dashboard Stripe --shot
+/screencaster parcours d'inscription en mobile --mobile --max-mb 5
 ```
 
 Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Windows et Linux. Ils ne sont jamais écrits dans le dépôt.
@@ -50,7 +50,7 @@ Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Wind
 ## Comment ça marche
 
 ```
-/demo "<description>"                 skill orchestrateur
+/screencaster "<description>"                 skill orchestrateur
   ├─ target-resolver   (haiku)        quoi filmer : onglet Chrome ou URL de l'app, compte de test
   ├─ demo-planner      (sonnet)       vidéo ou screenshot, storyboard avec vrais sélecteurs, slug du nom
   ├─ capture-operator  (sonnet)       exécute le storyboard via le serveur MCP demo-capture
@@ -70,32 +70,32 @@ Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Wind
 Prérequis : Node 20 ou plus, et Claude Code. ffmpeg est fourni par `ffmpeg-static`. Google Chrome est utilisé s'il est installé, sinon le Chromium de Playwright est téléchargé.
 
 ```bash
-git clone <ce dépôt> ~/demo-agent          # ou copie le dossier
-node ~/demo-agent/scripts/setup.mjs         # npm install + build (+ Chromium si pas de Chrome)
-claude plugin marketplace add ~/demo-agent
-claude plugin install demo-agent@demo-agent
+git clone <ce dépôt> ~/screencaster          # ou copie le dossier
+node ~/screencaster/scripts/setup.mjs         # npm install + build (+ Chromium si pas de Chrome)
+claude plugin marketplace add ~/screencaster
+claude plugin install screencaster@screencaster
 ```
 
-Relance Claude Code. Le serveur `demo-capture` démarre avec le plugin. Si `setup.mjs` n'a pas été lancé, il s'installe tout seul au premier démarrage (environ 1 min).
+Relance Claude Code. Le serveur `demo-capture` démarre avec le plugin. Si `setup.mjs` n'a pas été lancé, le serveur s'installe tout seul au premier démarrage (quelques secondes), puis le premier `/screencaster` télécharge ffmpeg, et Chromium si Chrome est absent (environ une minute).
 
 ## Filmer un onglet de ton Chrome
 
 Chrome n'autorise le pilotage à distance que sur un **profil dédié**. Lance-le avec :
 
 ```bash
-~/demo-agent/scripts/chrome-debug.sh                       # macOS / Linux
+~/screencaster/scripts/chrome-debug.sh                       # macOS / Linux
 powershell -ExecutionPolicy Bypass -File scripts\chrome-debug.ps1   # Windows
 ```
 
-Le profil est gardé dans `~/.demo-agent/chrome-profile` : connecte-toi une fois à tes sites dans cette fenêtre, la session est conservée. Ouvre ensuite l'onglet à filmer, puis lance `/demo …`. Quand l'agent se détache, l'onglet reste ouvert.
+Le profil est gardé dans `~/.screencaster/chrome-profile` : connecte-toi une fois à tes sites dans cette fenêtre, la session est conservée. Ouvre ensuite l'onglet à filmer, puis lance `/screencaster …`. Quand l'agent se détache, l'onglet reste ouvert.
 
 ## Comptes de test
 
 Le serveur lit les identifiants et les tape directement dans la page. Ils ne passent jamais par le modèle, les logs ou `meta.json`. Sources, par ordre de priorité :
 
-1. Variable d'environnement `DEMO_AGENT_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
-2. `<projet>/.demo-agent/accounts.json` (même format ; pense à l'ajouter à `.gitignore`)
-3. `~/.demo-agent/accounts.json`
+1. Variable d'environnement `SCREENCASTER_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
+2. `<projet>/.screencaster/accounts.json` (même format ; pense à l'ajouter à `.gitignore`)
+3. `~/.screencaster/accounts.json`
 4. Ou des clés d'un fichier `.env` du projet (`envFile` + `userKey` + `passKey`), que le resolver repère par leur **nom**.
 
 ## Sorties
@@ -112,7 +112,7 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
 
 ## Options et variables
 
-| `/demo` | Effet |
+| `/screencaster` | Effet |
 |---|---|
 | `--video` / `--shot` | force le mode (sinon le planner choisit) |
 | `--mkv` | conteneur MKV au lieu de MP4 |
@@ -122,12 +122,12 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
 
 | Variable | Défaut |
 |---|---|
-| `DEMO_AGENT_OUTPUT_DIR` | `~/Documents/Demos` |
-| `DEMO_AGENT_MAX_MB` | `8` (plafonné à 10) |
-| `DEMO_AGENT_CDP_URL` | `http://127.0.0.1:9222` |
-| `DEMO_AGENT_STEP_PAUSE_MS` | `600` (pause après chaque action) |
-| `DEMO_AGENT_FFMPEG` | ffmpeg-static, sinon `ffmpeg` du PATH |
-| `DEMO_AGENT_CHROME`, `DEMO_AGENT_CHROME_PROFILE` | pour `chrome-debug` |
+| `SCREENCASTER_OUTPUT_DIR` | `~/Documents/Demos` |
+| `SCREENCASTER_MAX_MB` | `8` (plafonné à 10) |
+| `SCREENCASTER_CDP_URL` | `http://127.0.0.1:9222` |
+| `SCREENCASTER_STEP_PAUSE_MS` | `600` (pause après chaque action) |
+| `SCREENCASTER_FFMPEG` | ffmpeg-static, sinon `ffmpeg` du PATH |
+| `SCREENCASTER_CHROME`, `SCREENCASTER_CHROME_PROFILE` | pour `chrome-debug` |
 
 ## Développement
 

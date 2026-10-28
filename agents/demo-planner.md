@@ -1,6 +1,6 @@
 ---
 name: demo-planner
-description: Sélecteur et scénariste d'une démo - décide vidéo ou screenshot, écrit le storyboard étape par étape avec des sélecteurs réels, et propose le slug de nommage. Utilisé par le skill /demo, étape 2.
+description: Sélecteur et scénariste d'une démo - décide vidéo ou screenshot, écrit le storyboard étape par étape avec des sélecteurs réels, et propose le slug de nommage. Utilisé par le skill /screencaster, étape 2.
 model: sonnet
 ---
 

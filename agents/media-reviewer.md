@@ -1,6 +1,6 @@
 ---
 name: media-reviewer
-description: Contrôle qualité d'une vidéo ou d'un screenshot de démo avant livraison - regarde les images, vérifie que la fonctionnalité est visible et qu'aucun secret ni erreur n'apparaît, propose une coupe. Utilisé par le skill /demo, étape 4.
+description: Contrôle qualité d'une vidéo ou d'un screenshot de démo avant livraison - regarde les images, vérifie que la fonctionnalité est visible et qu'aucun secret ni erreur n'apparaît, propose une coupe. Utilisé par le skill /screencaster, étape 4.
 model: sonnet
 ---
 

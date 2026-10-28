@@ -19,14 +19,14 @@ const { chromium } = require("playwright");
 
 const port = 9333;
 const cdpUrl = `http://127.0.0.1:${port}`;
-const profile = fs.mkdtempSync(path.join(os.tmpdir(), "demo-agent-chrome-"));
-const outDir = process.env.DEMO_AGENT_OUTPUT_DIR ?? fs.mkdtempSync(path.join(os.tmpdir(), "demo-agent-e2e-"));
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), "screencaster-chrome-"));
+const outDir = process.env.SCREENCASTER_OUTPUT_DIR ?? fs.mkdtempSync(path.join(os.tmpdir(), "screencaster-e2e-"));
 const app = pathToFileURL(path.join(root, "examples", "demo-app", "index.html")).href;
 const other = "data:text/html,<title>Autre onglet</title><h1>Rien à voir</h1>";
 
 // The user's Chrome if present (what chrome-debug.sh starts), else Playwright's Chromium.
 const macChrome = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-const exe = process.env.DEMO_AGENT_CHROME ?? (fs.existsSync(macChrome) ? macChrome : chromium.executablePath());
+const exe = process.env.SCREENCASTER_CHROME ?? (fs.existsSync(macChrome) ? macChrome : chromium.executablePath());
 const chrome = spawn(exe, [
   "--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "--window-size=1280,800", "--no-first-run", app,
 ], { stdio: process.env.E2E_DEBUG ? "inherit" : "ignore" });
@@ -41,7 +41,7 @@ const client = new Client({ name: "e2e-chrome", version: "0.0.0" });
 await client.connect(new StdioClientTransport({
   command: process.execPath,
   args: [path.join(serverDir, "dist", "server.js")],
-  env: { ...process.env, DEMO_AGENT_OUTPUT_DIR: outDir, DEMO_AGENT_STEP_PAUSE_MS: "300" },
+  env: { ...process.env, SCREENCASTER_OUTPUT_DIR: outDir, SCREENCASTER_STEP_PAUSE_MS: "300" },
   stderr: "inherit",
 }));
 async function call(name, args = {}) {
