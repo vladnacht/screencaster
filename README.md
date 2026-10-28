@@ -76,7 +76,7 @@ claude plugin marketplace add ~/demo-agent
 claude plugin install demo-agent@demo-agent
 ```
 
-Relance Claude Code. Le serveur `demo-capture` démarre avec le plugin. Si `setup.mjs` n'a pas été lancé, il s'installe tout seul au premier démarrage (environ 1 min).
+Relance Claude Code. Le serveur `demo-capture` démarre avec le plugin. Si `setup.mjs` n'a pas été lancé, le serveur s'installe tout seul au premier démarrage (quelques secondes), puis le premier `/demo` télécharge ffmpeg, et Chromium si Chrome est absent (environ une minute).
 
 ## Filmer un onglet de ton Chrome
 

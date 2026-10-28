@@ -13,7 +13,7 @@ Demande : `$ARGUMENTS`
 ## 0. Préparer
 - Lis les options dans la demande : `--video` / `--shot` → `forceMode` ; `--mkv` → `format: "mkv"` ; `--max-mb N` → `maxMb` (10 au maximum : le serveur ne livre jamais une vidéo de plus de 10 Mo) ; `--mobile` → viewport 390×844 ; `--headed` → navigateur visible.
 - `projectDir` = le dossier de travail courant.
-- Appelle `check_setup`. Il renvoie `pluginRoot` et `chromeDebugScript` : ne cherche jamais le dossier du plugin sur le disque. Si ffmpeg manque, dis à l'utilisateur de lancer une fois `node <pluginRoot>/scripts/setup.mjs`, puis de relancer Claude Code. Arrête-toi là. Si l'outil `check_setup` n'existe pas du tout, le serveur MCP n'a pas démarré : demande à l'utilisateur de relancer Claude Code (la première installation prend environ 1 min).
+- Appelle `check_setup` (au premier usage, il télécharge ffmpeg et parfois Chromium : préviens l'utilisateur que ça peut prendre une minute). Il renvoie `pluginRoot` et `chromeDebugScript` : ne cherche jamais le dossier du plugin sur le disque. Si ffmpeg manque, dis à l'utilisateur de lancer une fois `node <pluginRoot>/scripts/setup.mjs`, puis de relancer Claude Code. Arrête-toi là. Si l'outil `check_setup` n'existe pas du tout, le serveur MCP n'a pas démarré : demande à l'utilisateur de relancer Claude Code (la première installation prend quelques secondes).
 
 ## 1. Cible : sous-agent `demo-agent:target-resolver`
 Transmets `description` et `projectDir`.

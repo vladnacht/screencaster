@@ -5,6 +5,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -15,13 +16,26 @@ const run = (cmd, args) => {
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} a échoué (${r.status})`);
 };
 
-export function setup() {
-  console.error("[demo-agent] npm install…");
-  run(npm, ["install", "--no-audit", "--no-fund"]);
+// MCP startup must answer within Claude Code's 30 s connect timeout: only the light part
+// (npm packages without ffmpeg's 45 MB binary, then the build) runs there. The heavy
+// downloads run from the check_setup tool, which has no such limit.
+export function installServer() {
+  console.error("[demo-agent] npm ci…");
+  run(npm, ["ci", "--ignore-scripts", "--no-audit", "--no-fund"]);
   console.error("[demo-agent] build…");
   run(npm, ["run", "build"]);
+}
 
-  // Google Chrome is used when installed; otherwise fetch Playwright's Chromium.
+/** Download ffmpeg-static's binary, skipped by `--ignore-scripts`. */
+export function installFfmpeg() {
+  const bin = createRequire(path.join(serverDir, "package.json"))("ffmpeg-static");
+  if (bin && fs.existsSync(bin)) return;
+  console.error("[demo-agent] téléchargement de ffmpeg…");
+  run(process.execPath, [path.join(serverDir, "node_modules", "ffmpeg-static", "install.js")]);
+}
+
+/** Google Chrome is used when installed; otherwise fetch Playwright's Chromium. */
+export function installBrowser() {
   const hasChrome =
     (process.platform === "darwin" && fs.existsSync("/Applications/Google Chrome.app")) ||
     (process.platform === "win32" &&
@@ -33,6 +47,12 @@ export function setup() {
     console.error("[demo-agent] Chrome absent : installation du Chromium de Playwright…");
     run(process.platform === "win32" ? "npx.cmd" : "npx", ["playwright", "install", "chromium"]);
   }
+}
+
+export function setup() {
+  installServer();
+  installFfmpeg();
+  installBrowser();
   console.error("[demo-agent] prêt.");
 }
 
