@@ -68,8 +68,11 @@ export class Session {
     } catch {
       try {
         browser = await chromium.launch(launchOpts);
-      } catch {
-        throw new Error("Ni Google Chrome ni le Chromium de Playwright ne sont installés : lance `npx playwright install chromium`.");
+      } catch (e) {
+        // Keep Playwright's own reason: on Linux it is usually missing system libraries, not a missing browser.
+        throw new Error(
+          `Impossible de lancer Google Chrome ou le Chromium de Playwright. Installe Chrome, ou lance \`npx playwright install --with-deps chromium\` (Linux : avec sudo). Détail : ${e instanceof Error ? e.message.split("\n")[0] : e}`,
+        );
       }
     }
     const context = await browser.newContext({

@@ -33,7 +33,7 @@ test("output root is <home>/Documents/Demos on every platform, overridable", () 
 });
 
 test("uniquePath appends _2, _3 on collision", () => {
-  const taken = new Set(["/d/a.mp4", "/d/a_2.mp4"]);
+  const taken = new Set([path.join("/d", "a.mp4"), path.join("/d", "a_2.mp4")]);
   assert.equal(uniquePath("/d", "a", "mp4", (p) => taken.has(p)), path.join("/d", "a_3.mp4"));
   assert.equal(uniquePath("/d", "b", ".png", () => false), path.join("/d", "b.png"));
 });

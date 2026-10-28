@@ -88,5 +88,9 @@ try {
   const exited = new Promise((r) => chrome.once("exit", r));
   chrome.kill();
   await exited;
-  fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  try {
+    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch {
+    // Chrome's helper processes can still write to the temp profile after it exits (Linux): leave it to the OS.
+  }
 }

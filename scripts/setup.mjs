@@ -45,7 +45,9 @@ export function installBrowser() {
     (process.platform === "linux" && spawnSync("sh", ["-c", "command -v google-chrome || command -v google-chrome-stable"]).status === 0);
   if (!hasChrome) {
     console.error("[screencaster] Chrome absent : installation du Chromium de Playwright…");
-    run(process.platform === "win32" ? "npx.cmd" : "npx", ["playwright", "install", "chromium"]);
+    // Chromium's system libraries need apt, so only as root (containers, CI); otherwise the launch error says what to run.
+    const withDeps = process.platform === "linux" && process.getuid?.() === 0 ? ["--with-deps"] : [];
+    run(process.platform === "win32" ? "npx.cmd" : "npx", ["playwright", "install", ...withDeps, "chromium"]);
   }
 }
 

@@ -67,7 +67,7 @@ Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Wind
 
 ## Installation (une fois par machine)
 
-Prérequis : Node 20 ou plus, et Claude Code. ffmpeg est fourni par `ffmpeg-static`. Google Chrome est utilisé s'il est installé, sinon le Chromium de Playwright est téléchargé.
+Prérequis : Node 20 ou plus, et Claude Code. ffmpeg est fourni par `ffmpeg-static`. Google Chrome est utilisé s'il est installé, sinon le Chromium de Playwright est téléchargé. Sous Linux sans Chrome, Chromium a besoin de bibliothèques système : lance une fois `sudo npx playwright install-deps chromium`.
 
 ```bash
 git clone <ce dépôt> ~/screencaster          # ou copie le dossier
