@@ -12,6 +12,41 @@ Plugin Claude Code qui produit, à partir d'une simple description, **une vidéo
 
 Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Windows et Linux. Ils ne sont jamais écrits dans le dépôt.
 
+## Fonctionnalités
+
+**Ce qu'on peut filmer**
+- Une app web lancée par l'agent dans un navigateur : localhost, un environnement de staging, ou un fichier HTML local.
+- Un onglet déjà ouvert dans ton Chrome, retrouvé à partir de sa description (titre, domaine). S'il y a plusieurs candidats, l'agent te demande lequel.
+- L'URL, le port du serveur de dev et la page de départ sont trouvés dans le projet (`package.json`, `.claude/launch.json`, `docker-compose`, README). Si le serveur ne répond pas, l'agent propose de le lancer.
+
+**Vidéo ou screenshot**
+- L'agent choisit seul : un parcours ou une animation donne une vidéo, un état statique ou un avant/après donne des screenshots. Il peut aussi produire les deux.
+- `--video` ou `--shot` force le mode.
+
+**Scénario de la démo**
+- Un storyboard écrit avec les vrais sélecteurs de la page. Actions possibles : aller à une URL, cliquer, survoler, taper du texte, appuyer sur une touche, défiler, attendre un élément, se connecter, prendre un screenshot.
+- Une légende en bandeau peut accompagner chaque étape, et chaque action peut attendre un élément (par exemple le toast de confirmation).
+- La prise se joue d'un seul tenant, sans temps morts.
+- Les actions irréversibles (paiement, envoi, suppression) sont signalées et demandent ton accord.
+
+**Connexion aux pages protégées**
+- La connexion se fait avec un compte de test, hors caméra.
+- Les identifiants sont lus par le serveur et tapés directement dans la page : ils ne passent jamais par le modèle, les logs ni les fichiers produits.
+
+**Rendu de démo**
+- Faux curseur visible, effet au clic, légendes, overlays de dev masqués (Next, Vite, devtools).
+- Format bureau 1440×900, ou mobile 390×844 avec `--mobile`. `--headed` affiche le navigateur pendant la prise.
+
+**Contrôle qualité**
+- Un relecteur regarde des images de la vidéo. Il vérifie que la fonctionnalité est visible et qu'il n'y a ni erreur, ni page de login inattendue, ni secret lisible.
+- Au plus 2 nouvelles prises si la vidéo ne convient pas. Une vidéo qui montre un secret n'est jamais livrée.
+- Coupe automatique des temps morts au début et à la fin, et choix de la vignette.
+
+**Fichiers produits**
+- MP4 (ou MKV avec `--mkv`) léger, **jamais plus de 10 Mo** quelle que soit la durée, et PNG optimisés.
+- Nom déterministe (date, heure, projet, fonctionnalité, type, dimensions), vignette `.poster.png` et `.meta.json` (étapes horodatées, durée, poids, verdict de la relecture).
+- Rangés dans `~/Documents/Demos/<projet>/<date>/` sur macOS, Windows et Linux, jamais dans le dépôt.
+
 ## Comment ça marche
 
 ```
@@ -66,11 +101,11 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
 ## Sorties
 
 ```
-~/Documents/Demos/athena/2026-10-27/
-  2026-10-27_1432_athena_export-csv_video_1440x900.mp4
-  2026-10-27_1432_athena_export-csv_video_1440x900.poster.png
-  2026-10-27_1432_athena_export-csv_video_1440x900.meta.json   (étapes horodatées, durée, poids, verdict QA)
-  2026-10-27_1435_athena_export-csv_shot_1440x900.png
+~/Documents/Demos/acme-shop/2026-10-27/
+  2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
+  2026-10-27_1432_acme-shop_export-csv_video_1440x900.poster.png
+  2026-10-27_1432_acme-shop_export-csv_video_1440x900.meta.json   (étapes horodatées, durée, poids, verdict QA)
+  2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
 ```
 
 **Poids** : une vidéo ne dépasse **jamais 10 Mo**, quelle que soit sa durée. H.264 CRF 28 à 15 fps, largeur plafonnée à 1280 px, sans audio, `faststart`. Une démo de 30 s pèse en général quelques centaines de Ko. Si le fichier dépasse le plafond (8 Mo par défaut, réglable jusqu'à 10 Mo, compatible avec un upload dans une PR GitHub), il est ré-encodé en 2 passes au débit qui tient. Si ça ne suffit pas, le débit, la résolution (jusqu'à 320 px) et le fps (jusqu'à 5) baissent par paliers. Si même ça ne passe pas (plusieurs heures de vidéo), `finalize` échoue plutôt que de livrer un fichier trop lourd.
