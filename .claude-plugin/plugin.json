@@ -1,6 +1,6 @@
 {
   "name": "screencaster",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Lightweight demo videos (MP4/MKV, never over 10 MB) and screenshots of a web feature or a Chrome tab, from a plain description, driven by subagents: target, script, capture, review.",
   "author": {
     "name": "Kamal NASSIROU",

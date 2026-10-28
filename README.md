@@ -60,6 +60,7 @@ Files go to **`~/Documents/Demos/<project>/<date>/`** on macOS, Windows and Linu
   └─ finalize          (code)         compression, name, thumbnail, meta.json → Documents
 ```
 
+- Each subagent gets only the tools it needs: none can run shell commands, write files or browse the web, so a page with hidden instructions cannot make them act on your machine.
 - A subagent only where judgment is needed. Naming, compression and filing are code: deterministic and free.
 - One browser, owned by the MCP server: what is recorded is exactly what was driven.
 - The take runs in one go on the server (`run_storyboard`): no dead time while the model thinks, and short states such as a 2 s toast are caught.
@@ -96,7 +97,9 @@ The server reads the credentials and types them straight into the page. They nev
 1. Environment variable `SCREENCASTER_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
 2. `<project>/.screencaster/accounts.json` (same format; add it to `.gitignore`)
 3. `~/.screencaster/accounts.json`
-4. Or keys from a project `.env` file (`envFile` + `userKey` + `passKey`), which the resolver finds by their **name**.
+4. Or keys from a project `.env` file (`envFile` + `userKey` + `passKey`), which the resolver finds by their **name**. Only a `.env*` file inside the project is accepted.
+
+Credentials are typed only on a local app (`localhost`, `127.0.0.1`, `*.localhost`, `*.test`, local files). To sign in on a staging site, list its origin with the account, `{"admin": {"username": "…", "password": "…", "origins": ["https://staging.acme.com"]}}`, or in `SCREENCASTER_LOGIN_ORIGINS` (comma-separated). The agent never types them on any other page.
 
 ## Output
 
@@ -127,6 +130,7 @@ The server reads the credentials and types them straight into the page. They nev
 | `SCREENCASTER_CDP_URL` | `http://127.0.0.1:9222` |
 | `SCREENCASTER_STEP_PAUSE_MS` | `600` (pause after each action) |
 | `SCREENCASTER_FFMPEG` | ffmpeg-static, else `ffmpeg` on PATH |
+| `SCREENCASTER_LOGIN_ORIGINS` | none: origins besides local ones where test accounts may be typed |
 | `SCREENCASTER_CHROME`, `SCREENCASTER_CHROME_PROFILE` | for `chrome-debug` |
 
 ## Development

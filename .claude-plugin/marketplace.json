@@ -1,13 +1,13 @@
 {
   "name": "screencaster",
   "owner": { "name": "Kamal NASSIROU", "email": "vladnacht@gmail.com" },
-  "metadata": { "description": "Marketplace for the screencaster plugin", "version": "0.3.0" },
+  "metadata": { "description": "Marketplace for the screencaster plugin", "version": "0.4.0" },
   "plugins": [
     {
       "name": "screencaster",
       "source": "./",
       "description": "Demo videos and screenshots of web features, driven by subagents",
-      "version": "0.3.0"
+      "version": "0.4.0"
     }
   ]
 }
