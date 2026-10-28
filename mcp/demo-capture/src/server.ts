@@ -9,7 +9,7 @@ import { z } from "zod";
 import * as act from "./actions.js";
 import { DEFAULT_CDP_URL, listChromeTabs, Session, toUrl } from "./browser.js";
 import { checkFfmpeg, defaultVideoOptions, encodeVideo, extractFrames, extractPoster, optimizePng } from "./encode.js";
-import { buildBaseName, outputDir, outputRoot, uniquePath } from "./naming.js";
+import { buildBaseName, isInside, outputDir, outputRoot, uniquePath } from "./naming.js";
 import { DEFAULT_HIDE_SELECTORS } from "./overlay.js";
 import { Recorder, type Step } from "./recorder.js";
 import { listAccounts } from "./secrets.js";
@@ -50,6 +50,17 @@ const targetRef = {
   name: z.string().optional().describe("Nom accessible associé au rôle"),
 };
 
+/**
+ * Only files this server wrote (recordings, screenshots) may reach ffmpeg: a path from the model
+ * could be a URL or a playlist that makes ffmpeg read other files or hosts.
+ */
+function ownFile(file: string): string {
+  if (!fs.existsSync(file) || !isInside(runDir, file)) {
+    throw new Error(`Fichier refusé : ${file} ne vient pas de cette session (seuls ses enregistrements et captures sont acceptés).`);
+  }
+  return file;
+}
+
 function pngSize(file: string): { width: number; height: number } {
   const b = fs.readFileSync(file);
   return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
@@ -85,7 +96,7 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.3.0" });
+const server = new McpServer({ name: "demo-capture", version: "0.4.0" });
 
 server.registerTool(
   "check_setup",
@@ -123,9 +134,22 @@ server.registerTool(
   "list_accounts",
   {
     description: "Noms des comptes de test disponibles pour login (jamais les valeurs).",
-    inputSchema: { projectDir: z.string().optional().describe("Dossier du projet (défaut : cwd)") },
   },
-  tool(async ({ projectDir }: { projectDir?: string }) => listAccounts(projectDir ?? process.cwd())),
+  // The project is this server's cwd (where Claude Code runs), never a path the model picks.
+  tool(async () => listAccounts(process.cwd())),
+);
+
+server.registerTool(
+  "check_url",
+  {
+    description: "Code HTTP d'une URL http(s), pour vérifier qu'un serveur de dev répond (0 s'il ne répond pas).",
+    inputSchema: { url: z.string() },
+  },
+  tool(async ({ url }: { url: string }) => {
+    if (!/^https?:\/\//i.test(url)) throw new Error("check_url n'accepte que des URL http(s).");
+    const status = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(5000) }).then((r) => r.status, () => 0);
+    return { url, status };
+  }),
 );
 
 server.registerTool(
@@ -253,7 +277,6 @@ server.registerTool(
     description:
       "Se connecte avec un compte de test. Les identifiants sont lus côté serveur (SCREENCASTER_ACCOUNTS, .screencaster/accounts.json, ou envFile+userKey+passKey) et ne sont jamais renvoyés.",
     inputSchema: {
-      projectDir: z.string().optional(),
       account: z.string().optional().describe("Nom du compte (voir list_accounts)"),
       envFile: z.string().optional().describe("Fichier .env du projet contenant le compte de test, ex. .env.example"),
       userKey: z.string().optional(),
@@ -263,9 +286,9 @@ server.registerTool(
       submitSelector: z.string().optional(),
     },
   },
-  tool(async (a: LoginRef & { projectDir?: string }) => {
+  tool(async (a: LoginRef) => {
     const p = page();
-    await login(p, a.projectDir ?? process.cwd(), a);
+    await login(p, process.cwd(), a);
     return { loggedIn: true, url: p.url() };
   }),
 );
@@ -322,12 +345,11 @@ server.registerTool(
       record: z.boolean().default(true),
       fps: z.number().int().min(5).max(30).default(15),
       holdMs: z.number().min(0).max(10_000).default(1500).describe("Pause finale sur le résultat"),
-      projectDir: z.string().optional().describe("Pour les étapes login"),
     },
   },
-  tool(async (a: { steps: StoryStep[]; record: boolean; fps: number; holdMs: number; projectDir?: string }) => {
+  tool(async (a: { steps: StoryStep[]; record: boolean; fps: number; holdMs: number }) => {
     const p = page();
-    const ctx = { projectDir: a.projectDir ?? process.cwd(), shot: takeShot };
+    const ctx = { projectDir: process.cwd(), shot: takeShot };
     const firstRecorded = a.steps.findIndex((s) => s.recorded !== false);
     const pre = firstRecorded === -1 ? a.steps : a.steps.slice(0, firstRecorded);
     const main = firstRecorded === -1 ? [] : a.steps.slice(firstRecorded);
@@ -377,7 +399,7 @@ server.registerTool(
     inputSchema: { file: z.string().optional(), count: z.number().int().min(1).max(12).default(5), at: z.array(z.number()).optional() },
   },
   tool(async ({ file, count, at }: { file?: string; count: number; at?: number[] }) => {
-    const video = file ?? lastRecording?.file;
+    const video = file ? ownFile(file) : lastRecording?.file;
     if (!video) throw new Error("Aucune vidéo : passe file ou enregistre d'abord.");
     return extractFrames(video, path.join(runDir, `frames-${Date.now()}`), count, at);
   }),
@@ -421,7 +443,7 @@ server.registerTool(
     };
 
     if (a.kind === "video") {
-      const raw = a.rawFiles?.[0] ?? lastRecording?.file;
+      const raw = a.rawFiles?.[0] ? ownFile(a.rawFiles[0]) : lastRecording?.file;
       if (!raw) throw new Error("Aucun enregistrement à finaliser.");
       const vp = lastRecording?.viewport ?? session?.viewport ?? { width: 1440, height: 900 };
       const base = buildBaseName({ project: a.project, featureSlug: a.featureSlug, kind: "video", ...vp, ext: a.format, date: now });
@@ -445,7 +467,7 @@ server.registerTool(
       return { file: out, size: human(enc.sizeBytes), durationSec: meta.durationSec, poster, meta: `${stem}.meta.json`, passes: enc.passes };
     }
 
-    const raws = a.rawFiles?.length ? a.rawFiles : shots;
+    const raws = a.rawFiles?.length ? a.rawFiles.map(ownFile) : shots;
     if (!raws.length) throw new Error("Aucune capture à finaliser.");
     const files = [];
     for (const [i, raw] of raws.entries()) {

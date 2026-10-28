@@ -2,6 +2,7 @@
 name: demo-planner
 description: Picker and scriptwriter for a demo - decides video or screenshot, writes the step-by-step storyboard with real selectors, and proposes the naming slug. Used by the /screencaster skill, step 2.
 model: sonnet
+tools: Read, Glob, Grep
 ---
 
 You prepare a demo. You do not drive the browser: you produce a plan that the operator will run as is.
@@ -11,9 +12,10 @@ You prepare a demo. You do not drive the browser: you produce a plan that the op
 - `language`: the user's language; captions use it.
 - `target`: the target-resolver's output (source, url, needsAuth…).
 - `projectDir` and possible options (`forceMode`, `mobile`).
+- `changes` (optional): the files and commits of the current branch, gathered by the orchestrator.
 
 ## 1. Understand what to show
-- If `projectDir` is a git repository and the demo is about a recent feature, read `git diff --stat` then `git diff` (or the branch's commits against its base branch). Note the components, routes and labels that were added.
+- If the brief has `changes` and the demo is about a recent feature, read the changed files it lists. Note the components, routes and labels that were added.
 - Open the components involved to get **real** selectors: `data-testid`, exact button labels, `aria-label`, field `name`s, toast texts. A selector found in the code beats a guessed one.
 
 ## 2. Pick the mode (explicit rules)

@@ -1,7 +1,7 @@
 import type { Page } from "playwright";
 import { z } from "zod";
 import * as act from "./actions.js";
-import { resolveAccount } from "./secrets.js";
+import { loginAllowed, resolveAccount } from "./secrets.js";
 
 const DEFAULT_USER_SELECTOR =
   "input[type=email], input[name*=email i], input[name*=user i], input[name*=login i], input[autocomplete=username]";
@@ -21,6 +21,11 @@ export interface LoginRef {
 /** Fills the login form with a test account read server-side; values never leave this function. */
 export async function login(page: Page, projectDir: string, ref: LoginRef): Promise<void> {
   const acc = resolveAccount(projectDir, ref);
+  if (!loginAllowed(page.url(), acc)) {
+    throw new Error(
+      `Connexion refusée sur ${new URL(page.url()).origin} : les identifiants ne sont tapés que sur une app locale ou une origine listée (« origins » du compte dans accounts.json, ou SCREENCASTER_LOGIN_ORIGINS).`,
+    );
+  }
   const user = page.locator(ref.usernameSelector ?? DEFAULT_USER_SELECTOR).first();
   await user.waitFor({ state: "visible", timeout: 10_000 });
   await user.fill(acc.username);

@@ -63,6 +63,12 @@ export function outputDir(project: string, date: Date = new Date(), root: string
   return path.join(root, slugify(project), formatDate(date));
 }
 
+/** True when `file` is inside `dir`, symlinks resolved; both must exist. */
+export function isInside(dir: string, file: string): boolean {
+  const rel = path.relative(fs.realpathSync(dir), fs.realpathSync(file));
+  return rel !== "" && rel.split(path.sep)[0] !== ".." && !path.isAbsolute(rel);
+}
+
 /** First free path among `<base>.<ext>`, `<base>_2.<ext>`, `<base>_3.<ext>`… */
 export function uniquePath(dir: string, base: string, ext: string, exists: (p: string) => boolean = fs.existsSync): string {
   const clean = ext.replace(/^\./, "");

@@ -24,7 +24,8 @@ Pass `description` and `projectDir`.
 - `serverRunning: false`: offer to run `startCommand` in the background (Bash `run_in_background`). Wait until the URL answers before going on.
 
 ## 2. Plan: subagent `screencaster:demo-planner`
-Pass the brief (description, language, options, target, projectDir).
+If `projectDir` is a git repository on a feature branch, add `changes` to the brief: the output of `git diff --stat` and `git log --oneline` against the base branch. The planner has no shell, so it relies on this list.
+Pass the brief (description, language, options, target, projectDir, changes).
 - `risks` not empty: show each risk to the user and ask for their approval before going on.
 - Otherwise state in one line the chosen mode, the number of steps and the target length, then go on without waiting.
 

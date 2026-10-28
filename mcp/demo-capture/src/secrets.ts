@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { isInside } from "./naming.js";
 
 /**
  * Test accounts for `login`. Values are read here and typed straight into the page:
@@ -10,6 +11,8 @@ import path from "node:path";
 export interface Account {
   username: string;
   password: string;
+  /** Origins besides local ones where this account may be typed, e.g. ["https://staging.acme.com"]. */
+  origins?: string[];
 }
 
 type AccountMap = Record<string, Account>;
@@ -78,8 +81,10 @@ export function listAccounts(projectDir: string): { name: string; source: string
 export function resolveAccount(projectDir: string, ref: { account?: string } & Partial<EnvFileRef>): Account {
   if (ref.envFile && ref.userKey && ref.passKey) {
     const file = path.resolve(projectDir, ref.envFile);
-    if (!file.startsWith(path.resolve(projectDir))) throw new Error("envFile doit rester dans le projet.");
+    // Only a project .env file: otherwise any key=value file (~/.aws/credentials) could be typed into a page.
+    if (!/^\.env(\..+)?$/.test(path.basename(file))) throw new Error("envFile doit être un fichier .env du projet (.env, .env.example, .env.test…).");
     if (!fs.existsSync(file)) throw new Error(`Fichier introuvable : ${ref.envFile}`);
+    if (!isInside(projectDir, file)) throw new Error("envFile doit rester dans le projet.");
     const env = parseDotenv(fs.readFileSync(file, "utf8"));
     const username = env[ref.userKey];
     const password = env[ref.passKey];
@@ -95,4 +100,23 @@ export function resolveAccount(projectDir: string, ref: { account?: string } & P
     "Aucun compte de test trouvé. Ajoute .screencaster/accounts.json dans le projet " +
       '({"admin": {"username": "...", "password": "..."}}) ou passe envFile + userKey + passKey.',
   );
+}
+
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/;
+
+/**
+ * Credentials are typed only on a local app, or on an origin the user listed: the account's
+ * `origins` in accounts.json, or SCREENCASTER_LOGIN_ORIGINS. Never on whatever page is open.
+ */
+export function loginAllowed(pageUrl: string, acc: Account, env: NodeJS.ProcessEnv = process.env): boolean {
+  const u = new URL(pageUrl);
+  if (u.protocol === "file:" || LOCAL_HOST.test(u.hostname)) return true;
+  const listed = [...(Array.isArray(acc.origins) ? acc.origins : []), ...(env.SCREENCASTER_LOGIN_ORIGINS ?? "").split(",")];
+  return listed.some((o) => {
+    try {
+      return new URL(o.trim()).origin === u.origin;
+    } catch {
+      return false;
+    }
+  });
 }

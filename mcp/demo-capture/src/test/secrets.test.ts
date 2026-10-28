@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { listAccounts } from "../secrets.js";
+import { listAccounts, loginAllowed, resolveAccount } from "../secrets.js";
 
 test("malformed accounts JSON never quotes the password in the error", () => {
   const secret = "hunter2-do-not-leak";
@@ -21,4 +21,34 @@ test("malformed accounts JSON never quotes the password in the error", () => {
     if (saved === undefined) delete process.env.SCREENCASTER_ACCOUNTS;
     else process.env.SCREENCASTER_ACCOUNTS = saved;
   }
+});
+
+test("envFile accounts come only from a .env file inside the project", () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "demo-envfile-"));
+  const project = path.join(base, "app");
+  const evil = path.join(base, "app-evil");
+  for (const d of [project, evil, path.join(project, ".aws")]) fs.mkdirSync(d, { recursive: true });
+  const env = "U=ada@example.com\nP=test-pass\n";
+  fs.writeFileSync(path.join(project, ".env.example"), env);
+  fs.writeFileSync(path.join(evil, ".env"), env);
+  fs.writeFileSync(path.join(project, ".aws", "credentials"), "U = AKIA\nP = real-secret\n");
+  fs.symlinkSync(path.join(evil, ".env"), path.join(project, ".env.link"));
+  const ref = (envFile: string) => ({ envFile, userKey: "U", passKey: "P" });
+
+  assert.equal(resolveAccount(project, ref(".env.example")).password, "test-pass");
+  assert.throws(() => resolveAccount(project, ref(".aws/credentials")), /fichier \.env/);
+  assert.throws(() => resolveAccount(project, ref("../app-evil/.env")), /rester dans le projet/);
+  assert.throws(() => resolveAccount(project, ref(".env.link")), /rester dans le projet/);
+});
+
+test("credentials are typed only on a local app or a listed origin", () => {
+  const acc = { username: "a", password: "p" };
+  for (const url of ["http://localhost:3000/login", "http://127.0.0.1:8000", "http://app.test/", "https://shop.localhost/", "file:///tmp/a.html"]) {
+    assert.ok(loginAllowed(url, acc, {}), url);
+  }
+  assert.ok(!loginAllowed("https://evil.example/login", acc, {}));
+  assert.ok(!loginAllowed("https://staging.acme.com/login", acc, {}));
+  assert.ok(loginAllowed("https://staging.acme.com/login", { ...acc, origins: ["https://staging.acme.com"] }, {}));
+  assert.ok(loginAllowed("https://staging.acme.com/login", acc, { SCREENCASTER_LOGIN_ORIGINS: "https://x.io, https://staging.acme.com" }));
+  assert.ok(!loginAllowed("https://staging.acme.com.evil.example/", { ...acc, origins: ["https://staging.acme.com"] }, {}));
 });

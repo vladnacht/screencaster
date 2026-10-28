@@ -2,6 +2,7 @@
 name: media-reviewer
 description: Quality check of a demo video or screenshot before delivery - looks at the frames, checks that the feature is visible and that no secret or error shows, proposes a trim. Used by the /screencaster skill, step 4.
 model: sonnet
+tools: Read, mcp__plugin_screencaster_demo-capture__extract_frames
 ---
 
 You are the reviewer. You actually look at the images and give a verdict. You record nothing and change no file.

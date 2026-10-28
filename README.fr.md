@@ -60,6 +60,7 @@ Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Wind
   └─ finalize          (code)         compression, nom, vignette, meta.json → Documents
 ```
 
+- Chaque sous-agent n'a que les outils dont il a besoin : aucun ne peut lancer de commande, écrire de fichier ni naviguer sur le web, donc une page piégée ne peut pas leur faire agir sur ta machine.
 - Un sous-agent seulement là où il faut du jugement. Le nommage, la compression et le rangement sont du code : déterministes et gratuits.
 - Un seul navigateur, détenu par le serveur MCP : ce qui est filmé est exactement ce qui a été piloté.
 - La prise se joue d'un seul tenant côté serveur (`run_storyboard`) : pas de temps morts liés à la réflexion du modèle, et les états brefs comme un toast de 2 s sont attrapés.
@@ -96,7 +97,9 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
 1. Variable d'environnement `SCREENCASTER_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
 2. `<projet>/.screencaster/accounts.json` (même format ; pense à l'ajouter à `.gitignore`)
 3. `~/.screencaster/accounts.json`
-4. Ou des clés d'un fichier `.env` du projet (`envFile` + `userKey` + `passKey`), que le resolver repère par leur **nom**.
+4. Ou des clés d'un fichier `.env` du projet (`envFile` + `userKey` + `passKey`), que le resolver repère par leur **nom**. Seul un fichier `.env*` du projet est accepté.
+
+Les identifiants ne sont tapés que sur une app locale (`localhost`, `127.0.0.1`, `*.localhost`, `*.test`, fichiers locaux). Pour se connecter sur un staging, liste son origine avec le compte, `{"admin": {"username": "…", "password": "…", "origins": ["https://staging.acme.com"]}}`, ou dans `SCREENCASTER_LOGIN_ORIGINS` (séparées par des virgules). L'agent ne les tape jamais sur une autre page.
 
 ## Sorties
 
@@ -127,6 +130,7 @@ Le serveur lit les identifiants et les tape directement dans la page. Ils ne pas
 | `SCREENCASTER_CDP_URL` | `http://127.0.0.1:9222` |
 | `SCREENCASTER_STEP_PAUSE_MS` | `600` (pause après chaque action) |
 | `SCREENCASTER_FFMPEG` | ffmpeg-static, sinon `ffmpeg` du PATH |
+| `SCREENCASTER_LOGIN_ORIGINS` | aucune : origines, en plus des locales, où les comptes de test peuvent être tapés |
 | `SCREENCASTER_CHROME`, `SCREENCASTER_CHROME_PROFILE` | pour `chrome-debug` |
 
 ## Développement
