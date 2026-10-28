@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            chrome: /usr/bin/google-chrome
+          - os: macos-latest
+            chrome: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+          - os: windows-latest
+            chrome: C:\Program Files\Google\Chrome\Application\chrome.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The path a fresh plugin install takes: light install, build, then ffmpeg and the browser.
+      - run: node scripts/setup.mjs
+      - run: npm test
+        working-directory: mcp/demo-capture
+      - run: node scripts/e2e.mjs
+      - run: node scripts/e2e-chrome.mjs
+        env:
+          SCREENCASTER_CHROME: ${{ matrix.chrome }}
+
+  # No Chrome installed: setup must fetch Playwright's Chromium and the demo must still record.
+  no-chrome:
+    runs-on: ubuntu-latest
+    container: node:22-bookworm
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/setup.mjs
+      - run: node scripts/e2e.mjs
