@@ -11,7 +11,7 @@ import { isInside } from "./naming.js";
 export interface Account {
   username: string;
   password: string;
-  /** Origins besides local ones where this account may be typed, e.g. ["https://staging.acme.com"]. */
+  /** Origins besides local ones where this account may be typed (see the README). */
   origins?: string[];
 }
 
@@ -108,10 +108,10 @@ const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$|\.(localhost|test)$/;
  * Credentials are typed only on a local app, or on an origin the user listed: the account's
  * `origins` in accounts.json, or SCREENCASTER_LOGIN_ORIGINS. Never on whatever page is open.
  */
-export function loginAllowed(pageUrl: string, acc: Account, env: NodeJS.ProcessEnv = process.env): boolean {
+export function loginAllowed(pageUrl: string, acc: Account, extraOrigins: string = process.env.SCREENCASTER_LOGIN_ORIGINS ?? ""): boolean {
   const u = new URL(pageUrl);
   if (u.protocol === "file:" || LOCAL_HOST.test(u.hostname)) return true;
-  const listed = [...(Array.isArray(acc.origins) ? acc.origins : []), ...(env.SCREENCASTER_LOGIN_ORIGINS ?? "").split(",")];
+  const listed = [...(Array.isArray(acc.origins) ? acc.origins : []), ...extraOrigins.split(",")];
   return listed.some((o) => {
     try {
       return new URL(o.trim()).origin === u.origin;

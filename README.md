@@ -68,6 +68,14 @@ Files go to **`~/Documents/Demos/<project>/<date>/`** on macOS, Windows and Linu
 - A review loop: up to 2 retakes when the video does not show the feature.
 - A demo look: visible fake cursor, click ripple, caption banners, dev overlays hidden (Next, Vite, devtools).
 
+## Network and data
+
+Nothing is sent to the plugin's author: there is no telemetry and no backend.
+
+- **Network**: the browser loads the pages you ask to record, with their own requests. `check_url` sends one GET to your dev server to see if it answers. On first start the plugin downloads its npm packages (`npm ci`, pinned by `package-lock.json`), the ffmpeg binary of `ffmpeg-static` from its GitHub releases, and Playwright's Chromium only when Chrome is missing.
+- **Credentials**: test accounts are read from `SCREENCASTER_ACCOUNTS`, `.screencaster/accounts.json` or a project `.env` file, and typed only on a local app or an origin you listed (see [Test accounts](#test-accounts)). They are never sent anywhere else, logged or written to a file.
+- **Stored on your machine**: videos, screenshots, thumbnails and `meta.json` in `~/Documents/Demos`. They show whatever the recorded page shows, personal data included. Raw recordings sit in a temporary folder that is deleted when the server stops.
+
 ## Installation (once per machine)
 
 Requirements: Node 20 or later, and Claude Code. ffmpeg comes from `ffmpeg-static`. Google Chrome is used when installed; otherwise Playwright's Chromium is downloaded. On Linux without Chrome, Chromium needs system libraries: run `sudo npx playwright install-deps chromium` once.

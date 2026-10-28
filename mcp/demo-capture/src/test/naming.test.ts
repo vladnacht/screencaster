@@ -26,9 +26,9 @@ test("buildBaseName follows date_time_project_feature_kind[_n]_WxH", () => {
 
 test("output root is <home>/Documents/Demos on every platform, overridable", () => {
   for (const home of ["/Users/ada", "/home/ada", "C:\\Users\\ada"]) {
-    assert.equal(outputRoot({}, home), path.join(home, "Documents", "Demos"));
+    assert.equal(outputRoot(undefined, home), path.join(home, "Documents", "Demos"));
   }
-  assert.equal(outputRoot({ SCREENCASTER_OUTPUT_DIR: "/tmp/out" }, "/Users/ada"), path.resolve("/tmp/out"));
+  assert.equal(outputRoot("/tmp/out", "/Users/ada"), path.resolve("/tmp/out"));
   assert.equal(outputDir("Mon Blog", date, "/r"), path.join("/r", "mon-blog", "2026-10-27"));
 });
 

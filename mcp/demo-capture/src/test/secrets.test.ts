@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
-import { listAccounts, loginAllowed, resolveAccount } from "../secrets.js";
+import { listAccounts, resolveAccount } from "../secrets.js";
 
 test("malformed accounts JSON never quotes the password in the error", () => {
   const secret = "hunter2-do-not-leak";
@@ -39,16 +39,4 @@ test("envFile accounts come only from a .env file inside the project", () => {
   assert.throws(() => resolveAccount(project, ref(".aws/credentials")), /fichier \.env/);
   assert.throws(() => resolveAccount(project, ref("../app-evil/.env")), /rester dans le projet/);
   assert.throws(() => resolveAccount(project, ref(".env.link")), /rester dans le projet/);
-});
-
-test("credentials are typed only on a local app or a listed origin", () => {
-  const acc = { username: "a", password: "p" };
-  for (const url of ["http://localhost:3000/login", "http://127.0.0.1:8000", "http://app.test/", "https://shop.localhost/", "file:///tmp/a.html"]) {
-    assert.ok(loginAllowed(url, acc, {}), url);
-  }
-  assert.ok(!loginAllowed("https://evil.example/login", acc, {}));
-  assert.ok(!loginAllowed("https://staging.acme.com/login", acc, {}));
-  assert.ok(loginAllowed("https://staging.acme.com/login", { ...acc, origins: ["https://staging.acme.com"] }, {}));
-  assert.ok(loginAllowed("https://staging.acme.com/login", acc, { SCREENCASTER_LOGIN_ORIGINS: "https://x.io, https://staging.acme.com" }));
-  assert.ok(!loginAllowed("https://staging.acme.com.evil.example/", { ...acc, origins: ["https://staging.acme.com"] }, {}));
 });

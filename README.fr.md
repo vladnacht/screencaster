@@ -68,6 +68,14 @@ Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Wind
 - Une boucle de relecture : au plus 2 nouvelles prises si la vidéo ne montre pas la fonctionnalité.
 - Un rendu de démo : faux curseur visible, effet au clic, légendes en bandeau, overlays de dev masqués (Next, Vite, devtools).
 
+## Réseau et données
+
+Rien n'est envoyé à l'auteur du plugin : pas de télémétrie, pas de serveur.
+
+- **Réseau** : le navigateur charge les pages que tu demandes de filmer, avec leurs propres requêtes. `check_url` envoie un GET à ton serveur de dev pour voir s'il répond. Au premier démarrage, le plugin télécharge ses paquets npm (`npm ci`, fixés par `package-lock.json`), le binaire ffmpeg de `ffmpeg-static` depuis ses releases GitHub, et le Chromium de Playwright seulement si Chrome est absent.
+- **Identifiants** : les comptes de test sont lus dans `SCREENCASTER_ACCOUNTS`, `.screencaster/accounts.json` ou un fichier `.env` du projet, et tapés seulement sur une app locale ou une origine que tu as listée (voir [Comptes de test](#comptes-de-test)). Ils ne sont jamais envoyés ailleurs, ni journalisés, ni écrits dans un fichier.
+- **Stocké sur ta machine** : vidéos, captures, vignettes et `meta.json` dans `~/Documents/Demos`. Ils montrent ce qu'affiche la page filmée, données personnelles comprises. Les enregistrements bruts restent dans un dossier temporaire supprimé à l'arrêt du serveur.
+
 ## Installation (une fois par machine)
 
 Prérequis : Node 20 ou plus, et Claude Code. ffmpeg est fourni par `ffmpeg-static`. Google Chrome est utilisé s'il est installé, sinon le Chromium de Playwright est téléchargé. Sous Linux sans Chrome, Chromium a besoin de bibliothèques système : lance une fois `sudo npx playwright install-deps chromium`.
