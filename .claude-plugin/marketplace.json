@@ -1,13 +1,13 @@
 {
-  "name": "demo-agent",
+  "name": "screencaster",
   "owner": { "name": "Kamal NASSIROU", "email": "vladnacht@gmail.com" },
-  "metadata": { "description": "Marketplace locale du plugin demo-agent", "version": "0.1.2" },
+  "metadata": { "description": "Marketplace locale du plugin screencaster", "version": "0.2.0" },
   "plugins": [
     {
-      "name": "demo-agent",
+      "name": "screencaster",
       "source": "./",
       "description": "Vidéos de démo et screenshots pilotés par sous-agents",
-      "version": "0.1.2"
+      "version": "0.2.0"
     }
   ]
 }

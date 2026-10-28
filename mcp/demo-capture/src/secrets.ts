@@ -54,11 +54,11 @@ function readJson(file: string): AccountMap {
 function sources(projectDir: string): { source: string; accounts: () => AccountMap }[] {
   return [
     {
-      source: "env DEMO_AGENT_ACCOUNTS",
-      accounts: () => (process.env.DEMO_AGENT_ACCOUNTS ? parseAccounts(process.env.DEMO_AGENT_ACCOUNTS, "DEMO_AGENT_ACCOUNTS") : {}),
+      source: "env SCREENCASTER_ACCOUNTS",
+      accounts: () => (process.env.SCREENCASTER_ACCOUNTS ? parseAccounts(process.env.SCREENCASTER_ACCOUNTS, "SCREENCASTER_ACCOUNTS") : {}),
     },
-    { source: ".demo-agent/accounts.json (projet)", accounts: () => readJson(path.join(projectDir, ".demo-agent", "accounts.json")) },
-    { source: "~/.demo-agent/accounts.json", accounts: () => readJson(path.join(os.homedir(), ".demo-agent", "accounts.json")) },
+    { source: ".screencaster/accounts.json (projet)", accounts: () => readJson(path.join(projectDir, ".screencaster", "accounts.json")) },
+    { source: "~/.screencaster/accounts.json", accounts: () => readJson(path.join(os.homedir(), ".screencaster", "accounts.json")) },
   ];
 }
 
@@ -92,7 +92,7 @@ export function resolveAccount(projectDir: string, ref: { account?: string } & P
     if (name && all[name]) return all[name];
   }
   throw new Error(
-    "Aucun compte de test trouvé. Ajoute .demo-agent/accounts.json dans le projet " +
+    "Aucun compte de test trouvé. Ajoute .screencaster/accounts.json dans le projet " +
       '({"admin": {"username": "...", "password": "..."}}) ou passe envFile + userKey + passKey.',
   );
 }

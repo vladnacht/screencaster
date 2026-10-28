@@ -1,7 +1,7 @@
 import type { Locator, Page } from "playwright";
 
-/** Pause after each action so a viewer can follow (DEMO_AGENT_STEP_PAUSE_MS, default 600). */
-const STEP_PAUSE_MS = Number(process.env.DEMO_AGENT_STEP_PAUSE_MS ?? 600);
+/** Pause after each action so a viewer can follow (SCREENCASTER_STEP_PAUSE_MS, default 600). */
+const STEP_PAUSE_MS = Number(process.env.SCREENCASTER_STEP_PAUSE_MS ?? 600);
 
 export interface TargetRef {
   /** Any Playwright selector: CSS, `text=…`, `role=button[name="Export"]`, `[data-testid=…]`. */

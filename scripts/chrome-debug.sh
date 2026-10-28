@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Start Google Chrome with a remote-debugging port so demo-capture can list and record its tabs.
 # Chrome refuses remote debugging on the default profile (since v136), so this uses a dedicated
-# profile in ~/.demo-agent/chrome-profile: sign in there once, the session is kept.
+# profile in ~/.screencaster/chrome-profile: sign in there once, the session is kept.
 #
 # Usage: scripts/chrome-debug.sh [url ...]      (PORT=9222 by default)
 set -euo pipefail
 
 PORT="${PORT:-9222}"
-PROFILE="${DEMO_AGENT_CHROME_PROFILE:-$HOME/.demo-agent/chrome-profile}"
+PROFILE="${SCREENCASTER_CHROME_PROFILE:-$HOME/.screencaster/chrome-profile}"
 mkdir -p "$PROFILE"
 
 if curl -fs "http://127.0.0.1:$PORT/json/version" >/dev/null 2>&1; then
@@ -23,9 +23,9 @@ case "$(uname -s)" in
     CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
     ;;
 esac
-CHROME="${DEMO_AGENT_CHROME:-$CHROME}"
+CHROME="${SCREENCASTER_CHROME:-$CHROME}"
 if [[ -z "$CHROME" || ! -x "$CHROME" ]]; then
-  echo "Chrome introuvable. Définis DEMO_AGENT_CHROME vers son exécutable." >&2
+  echo "Chrome introuvable. Définis SCREENCASTER_CHROME vers son exécutable." >&2
   exit 1
 fi
 

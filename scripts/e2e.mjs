@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // End-to-end check of the demo-capture MCP server, driven over stdio like Claude does:
 // record the bundled demo app, take a screenshot, finalize both, and assert on the output.
-// Usage: node scripts/e2e.mjs   (writes into $DEMO_AGENT_OUTPUT_DIR, default a temp folder)
+// Usage: node scripts/e2e.mjs   (writes into $SCREENCASTER_OUTPUT_DIR, default a temp folder)
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -15,11 +15,11 @@ const require = createRequire(path.join(serverDir, "package.json"));
 const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
 const { StdioClientTransport } = require("@modelcontextprotocol/sdk/client/stdio.js");
 
-const outDir = process.env.DEMO_AGENT_OUTPUT_DIR ?? fs.mkdtempSync(path.join(os.tmpdir(), "demo-agent-e2e-"));
+const outDir = process.env.SCREENCASTER_OUTPUT_DIR ?? fs.mkdtempSync(path.join(os.tmpdir(), "screencaster-e2e-"));
 const transport = new StdioClientTransport({
   command: process.execPath,
   args: [path.join(serverDir, "dist", "server.js")],
-  env: { ...process.env, DEMO_AGENT_OUTPUT_DIR: outDir, DEMO_AGENT_STEP_PAUSE_MS: "400" },
+  env: { ...process.env, SCREENCASTER_OUTPUT_DIR: outDir, SCREENCASTER_STEP_PAUSE_MS: "400" },
   stderr: "inherit",
 });
 const client = new Client({ name: "e2e", version: "0.0.0" });

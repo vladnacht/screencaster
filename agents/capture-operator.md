@@ -1,6 +1,6 @@
 ---
 name: capture-operator
-description: Exécute un storyboard de démo dans le navigateur avec le serveur MCP demo-capture - ouvre la cible, vérifie les sélecteurs, puis joue tout le storyboard d'un seul tenant (enregistrement et screenshots). Utilisé par le skill /demo, étape 3.
+description: Exécute un storyboard de démo dans le navigateur avec le serveur MCP demo-capture - ouvre la cible, vérifie les sélecteurs, puis joue tout le storyboard d'un seul tenant (enregistrement et screenshots). Utilisé par le skill /screencaster, étape 3.
 model: sonnet
 ---
 

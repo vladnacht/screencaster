@@ -20,9 +20,9 @@ const run = (cmd, args) => {
 // (npm packages without ffmpeg's 45 MB binary, then the build) runs there. The heavy
 // downloads run from the check_setup tool, which has no such limit.
 export function installServer() {
-  console.error("[demo-agent] npm ci…");
+  console.error("[screencaster] npm ci…");
   run(npm, ["ci", "--ignore-scripts", "--no-audit", "--no-fund"]);
-  console.error("[demo-agent] build…");
+  console.error("[screencaster] build…");
   run(npm, ["run", "build"]);
 }
 
@@ -30,7 +30,7 @@ export function installServer() {
 export function installFfmpeg() {
   const bin = createRequire(path.join(serverDir, "package.json"))("ffmpeg-static");
   if (bin && fs.existsSync(bin)) return;
-  console.error("[demo-agent] téléchargement de ffmpeg…");
+  console.error("[screencaster] téléchargement de ffmpeg…");
   run(process.execPath, [path.join(serverDir, "node_modules", "ffmpeg-static", "install.js")]);
 }
 
@@ -44,7 +44,7 @@ export function installBrowser() {
         .some((p) => fs.existsSync(path.join(p, "Google", "Chrome", "Application", "chrome.exe")))) ||
     (process.platform === "linux" && spawnSync("sh", ["-c", "command -v google-chrome || command -v google-chrome-stable"]).status === 0);
   if (!hasChrome) {
-    console.error("[demo-agent] Chrome absent : installation du Chromium de Playwright…");
+    console.error("[screencaster] Chrome absent : installation du Chromium de Playwright…");
     run(process.platform === "win32" ? "npx.cmd" : "npx", ["playwright", "install", "chromium"]);
   }
 }
@@ -53,7 +53,7 @@ export function setup() {
   installServer();
   installFfmpeg();
   installBrowser();
-  console.error("[demo-agent] prêt.");
+  console.error("[screencaster] prêt.");
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

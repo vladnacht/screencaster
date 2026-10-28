@@ -1,6 +1,6 @@
 {
-  "name": "demo-agent",
-  "version": "0.1.2",
+  "name": "screencaster",
+  "version": "0.2.0",
   "description": "Vidéos de démo (MP4/MKV légers) et screenshots d'une fonctionnalité web ou d'un onglet Chrome, pilotés par des sous-agents : cible, scénario, prise de vue, relecture.",
   "author": {
     "name": "Kamal NASSIROU",

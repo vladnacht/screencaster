@@ -8,17 +8,17 @@ import { listAccounts } from "../secrets.js";
 test("malformed accounts JSON never quotes the password in the error", () => {
   const secret = "hunter2-do-not-leak";
   const project = fs.mkdtempSync(path.join(os.tmpdir(), "demo-secrets-"));
-  fs.mkdirSync(path.join(project, ".demo-agent"));
-  fs.writeFileSync(path.join(project, ".demo-agent", "accounts.json"), `{"admin": {"username": "a", "password": ${secret}}}`);
+  fs.mkdirSync(path.join(project, ".screencaster"));
+  fs.writeFileSync(path.join(project, ".screencaster", "accounts.json"), `{"admin": {"username": "a", "password": ${secret}}}`);
 
-  const saved = process.env.DEMO_AGENT_ACCOUNTS;
+  const saved = process.env.SCREENCASTER_ACCOUNTS;
   try {
-    delete process.env.DEMO_AGENT_ACCOUNTS;
+    delete process.env.SCREENCASTER_ACCOUNTS;
     assert.throws(() => listAccounts(project), (e: Error) => e.message.includes("accounts.json") && !e.message.includes(secret));
-    process.env.DEMO_AGENT_ACCOUNTS = `{"admin": {"password": ${secret}`;
-    assert.throws(() => listAccounts(project), (e: Error) => e.message.includes("DEMO_AGENT_ACCOUNTS") && !e.message.includes(secret));
+    process.env.SCREENCASTER_ACCOUNTS = `{"admin": {"password": ${secret}`;
+    assert.throws(() => listAccounts(project), (e: Error) => e.message.includes("SCREENCASTER_ACCOUNTS") && !e.message.includes(secret));
   } finally {
-    if (saved === undefined) delete process.env.DEMO_AGENT_ACCOUNTS;
-    else process.env.DEMO_AGENT_ACCOUNTS = saved;
+    if (saved === undefined) delete process.env.SCREENCASTER_ACCOUNTS;
+    else process.env.SCREENCASTER_ACCOUNTS = saved;
   }
 });

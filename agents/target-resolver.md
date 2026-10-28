@@ -1,6 +1,6 @@
 ---
 name: target-resolver
-description: Identifie QUOI filmer pour une démo à partir d'une description - un onglet du Chrome de l'utilisateur ou l'URL d'une app web (localhost, staging) - et comment s'y connecter. Utilisé par le skill /demo, étape 1.
+description: Identifie QUOI filmer pour une démo à partir d'une description - un onglet du Chrome de l'utilisateur ou l'URL d'une app web (localhost, staging) - et comment s'y connecter. Utilisé par le skill /screencaster, étape 1.
 model: haiku
 ---
 
@@ -29,7 +29,6 @@ Tu identifies la cible d'une démo vidéo ou d'une capture. Tu ne filmes rien et
 ## Règles strictes
 - **Ne recopie jamais une valeur d'identifiant, de mot de passe ou de token**, ni dans ta réponse ni dans une commande. Seuls les noms de comptes, les chemins de fichiers et les noms de clés sont autorisés.
 - Lecture seule : tu ne modifies aucun fichier et tu ne lances aucun serveur.
-- Recherche web, si jamais elle est nécessaire : passe par les outils Perplexity, jamais par WebSearch ou WebFetch.
 
 ## Sortie : un unique bloc JSON, rien d'autre
 ```json

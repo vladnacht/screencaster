@@ -1,6 +1,6 @@
 node_modules/
 mcp/demo-capture/dist/
 .e2e-out/
-.demo-agent/
+.screencaster/
 *.log
 .DS_Store

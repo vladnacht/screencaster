@@ -21,7 +21,7 @@ let session: Session | undefined;
 let recorder: Recorder | undefined;
 let lastRecording: { file: string; durationSec: number; steps: Step[]; viewport: { width: number; height: number }; url: string } | undefined;
 let shots: string[] = [];
-const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "demo-agent-"));
+const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "screencaster-"));
 
 const ok = (data: unknown) => ({ content: [{ type: "text" as const, text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] });
 const fail = (e: unknown) => ({ isError: true, content: [{ type: "text" as const, text: e instanceof Error ? e.message : String(e) }] });
@@ -85,7 +85,7 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.1.2" });
+const server = new McpServer({ name: "demo-capture", version: "0.2.0" });
 
 server.registerTool(
   "check_setup",
@@ -251,7 +251,7 @@ server.registerTool(
   "login",
   {
     description:
-      "Se connecte avec un compte de test. Les identifiants sont lus côté serveur (DEMO_AGENT_ACCOUNTS, .demo-agent/accounts.json, ou envFile+userKey+passKey) et ne sont jamais renvoyés.",
+      "Se connecte avec un compte de test. Les identifiants sont lus côté serveur (SCREENCASTER_ACCOUNTS, .screencaster/accounts.json, ou envFile+userKey+passKey) et ne sont jamais renvoyés.",
     inputSchema: {
       projectDir: z.string().optional(),
       account: z.string().optional().describe("Nom du compte (voir list_accounts)"),

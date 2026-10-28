@@ -16,7 +16,7 @@ test("two shot batches finalized in the same minute keep their own meta.json", a
   const server = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "server.js");
   const client = new Client({ name: "test", version: "0.0.0" });
   await client.connect(new StdioClientTransport({
-    command: process.execPath, args: [server], env: { ...process.env, DEMO_AGENT_OUTPUT_DIR: path.join(dir, "out") } as Record<string, string>,
+    command: process.execPath, args: [server], env: { ...process.env, SCREENCASTER_OUTPUT_DIR: path.join(dir, "out") } as Record<string, string>,
   }));
   try {
     const finalize = async (description: string) => {
