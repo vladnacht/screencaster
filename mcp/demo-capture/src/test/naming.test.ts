@@ -15,12 +15,12 @@ test("slugify strips accents, symbols and length", () => {
 
 test("buildBaseName follows date_time_project_feature_kind[_n]_WxH", () => {
   assert.equal(
-    buildBaseName({ project: "Athena", featureSlug: "export-csv", kind: "video", width: 1440, height: 900, ext: "mp4", date }),
-    "2026-10-27_1432_athena_export-csv_video_1440x900",
+    buildBaseName({ project: "Acme Shop", featureSlug: "export-csv", kind: "video", width: 1440, height: 900, ext: "mp4", date }),
+    "2026-10-27_1432_acme-shop_export-csv_video_1440x900",
   );
   assert.equal(
-    buildBaseName({ project: "athena", featureSlug: "x", kind: "shot", width: 390, height: 844, ext: "png", index: 2, date }),
-    "2026-10-27_1432_athena_x_shot_2_390x844",
+    buildBaseName({ project: "acme-shop", featureSlug: "x", kind: "shot", width: 390, height: 844, ext: "png", index: 2, date }),
+    "2026-10-27_1432_acme-shop_x_shot_2_390x844",
   );
 });
 
@@ -29,7 +29,7 @@ test("output root is <home>/Documents/Demos on every platform, overridable", () 
     assert.equal(outputRoot({}, home), path.join(home, "Documents", "Demos"));
   }
   assert.equal(outputRoot({ DEMO_AGENT_OUTPUT_DIR: "/tmp/out" }, "/Users/ada"), path.resolve("/tmp/out"));
-  assert.equal(outputDir("La Zone", date, "/r"), path.join("/r", "la-zone", "2026-10-27"));
+  assert.equal(outputDir("Mon Blog", date, "/r"), path.join("/r", "mon-blog", "2026-10-27"));
 });
 
 test("uniquePath appends _2, _3 on collision", () => {
