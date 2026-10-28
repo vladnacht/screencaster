@@ -1,140 +1,147 @@
 # screencaster
 
-Plugin Claude Code qui produit, à partir d'une simple description, **une vidéo de démo légère (MP4 ou MKV)** ou **des screenshots PNG** :
-- d'une fonctionnalité d'une app web (localhost, staging), avec connexion par compte de test ;
-- d'un onglet déjà ouvert dans ton Chrome.
+**English** · [Français](README.fr.md)
+
+A Claude Code plugin that turns a plain description into **a lightweight demo video (MP4 or MKV)** or **PNG screenshots**:
+- of a feature in a web app (localhost, staging), signing in with a test account;
+- of a tab already open in your Chrome.
 
 ```
-/screencaster filme l'export CSV que je viens d'implémenter
-/screencaster screenshot de l'onglet du dashboard Stripe --shot
-/screencaster parcours d'inscription en mobile --mobile --max-mb 5
+/screencaster record the CSV export I just built
+/screencaster screenshot the Stripe dashboard tab --shot
+/screencaster the sign-up flow on mobile --mobile --max-mb 5
 ```
 
-Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Windows et Linux. Ils ne sont jamais écrits dans le dépôt.
+Files go to **`~/Documents/Demos/<project>/<date>/`** on macOS, Windows and Linux. They are never written into your repository. The agent answers in the language you write in.
 
-## Fonctionnalités
+## Features
 
-**Ce qu'on peut filmer**
-- Une app web lancée par l'agent dans un navigateur : localhost, un environnement de staging, ou un fichier HTML local.
-- Un onglet déjà ouvert dans ton Chrome, retrouvé à partir de sa description (titre, domaine). S'il y a plusieurs candidats, l'agent te demande lequel.
-- L'URL, le port du serveur de dev et la page de départ sont trouvés dans le projet (`package.json`, `.claude/launch.json`, `docker-compose`, README). Si le serveur ne répond pas, l'agent propose de le lancer.
+**What it can record**
+- A web app the agent opens in a browser: localhost, a staging environment, or a local HTML file.
+- A tab already open in your Chrome, found from its description (title, domain). When several tabs match, the agent asks which one.
+- The URL, the dev server port and the start page are read from the project (`package.json`, `.claude/launch.json`, `docker-compose`, README). If the server is down, the agent offers to start it.
 
-**Vidéo ou screenshot**
-- L'agent choisit seul : un parcours ou une animation donne une vidéo, un état statique ou un avant/après donne des screenshots. Il peut aussi produire les deux.
-- `--video` ou `--shot` force le mode.
+**Video or screenshot**
+- The agent decides: a flow or an animation becomes a video; a static state or a before/after becomes screenshots. It can also produce both.
+- `--video` or `--shot` forces the mode.
 
-**Scénario de la démo**
-- Un storyboard écrit avec les vrais sélecteurs de la page. Actions possibles : aller à une URL, cliquer, survoler, taper du texte, appuyer sur une touche, défiler, attendre un élément, se connecter, prendre un screenshot.
-- Une légende en bandeau peut accompagner chaque étape, et chaque action peut attendre un élément (par exemple le toast de confirmation).
-- La prise se joue d'un seul tenant, sans temps morts.
-- Les actions irréversibles (paiement, envoi, suppression) sont signalées et demandent ton accord.
+**Demo script**
+- A storyboard written with the page's real selectors. Available actions: go to a URL, click, hover, type text, press a key, scroll, wait for an element, sign in, take a screenshot.
+- Each step can carry a caption banner, and each action can wait for an element (a confirmation toast, for example).
+- The take is recorded in one go, with no dead time.
+- Irreversible actions (payment, sending, deleting) are flagged and need your approval.
 
-**Connexion aux pages protégées**
-- La connexion se fait avec un compte de test, hors caméra.
-- Les identifiants sont lus par le serveur et tapés directement dans la page : ils ne passent jamais par le modèle, les logs ni les fichiers produits.
+**Signing in to protected pages**
+- Sign-in uses a test account, off camera.
+- Credentials are read by the server and typed straight into the page: they never go through the model, the logs or the output files.
 
-**Rendu de démo**
-- Faux curseur visible, effet au clic, légendes, overlays de dev masqués (Next, Vite, devtools).
-- Format bureau 1440×900, ou mobile 390×844 avec `--mobile`. `--headed` affiche le navigateur pendant la prise.
+**Demo look**
+- Visible fake cursor, click ripple, captions, dev overlays hidden (Next, Vite, devtools).
+- Desktop 1440×900, or mobile 390×844 with `--mobile`. `--headed` shows the browser while recording.
 
-**Contrôle qualité**
-- Un relecteur regarde des images de la vidéo. Il vérifie que la fonctionnalité est visible et qu'il n'y a ni erreur, ni page de login inattendue, ni secret lisible.
-- Au plus 2 nouvelles prises si la vidéo ne convient pas. Une vidéo qui montre un secret n'est jamais livrée.
-- Coupe automatique des temps morts au début et à la fin, et choix de la vignette.
+**Quality check**
+- A reviewer looks at frames from the video. It checks that the feature is visible and that there is no error, no unexpected sign-in page and no readable secret.
+- Up to 2 retakes when the video is not right. A video that shows a secret is never delivered.
+- Dead time at the start and end is trimmed, and the poster frame is chosen.
 
-**Fichiers produits**
-- MP4 (ou MKV avec `--mkv`) léger, **jamais plus de 10 Mo** quelle que soit la durée, et PNG optimisés.
-- Nom déterministe (date, heure, projet, fonctionnalité, type, dimensions), vignette `.poster.png` et `.meta.json` (étapes horodatées, durée, poids, verdict de la relecture).
-- Rangés dans `~/Documents/Demos/<projet>/<date>/` sur macOS, Windows et Linux, jamais dans le dépôt.
+**Output files**
+- Lightweight MP4 (or MKV with `--mkv`), **never more than 10 MB** whatever the length, and optimized PNGs.
+- Deterministic name (date, time, project, feature, kind, size), a `.poster.png` thumbnail and a `.meta.json` (timed steps, length, size, review verdict).
+- Stored in `~/Documents/Demos/<project>/<date>/` on macOS, Windows and Linux, never in the repository.
 
-## Comment ça marche
+## How it works
 
 ```
-/screencaster "<description>"                 skill orchestrateur
-  ├─ target-resolver   (haiku)        quoi filmer : onglet Chrome ou URL de l'app, compte de test
-  ├─ demo-planner      (sonnet)       vidéo ou screenshot, storyboard avec vrais sélecteurs, slug du nom
-  ├─ capture-operator  (sonnet)       exécute le storyboard via le serveur MCP demo-capture
-  ├─ media-reviewer    (sonnet)       regarde les images : fonctionnalité visible ? erreur ? secret ? coupe
-  └─ finalize          (code)         compression, nom, vignette, meta.json → Documents
+/screencaster "<description>"          orchestrator skill
+  ├─ target-resolver   (haiku)        what to record: a Chrome tab or the app URL, test account
+  ├─ demo-planner      (sonnet)       video or screenshot, storyboard with real selectors, name slug
+  ├─ capture-operator  (sonnet)       runs the storyboard through the demo-capture MCP server
+  ├─ media-reviewer    (sonnet)       looks at the frames: feature visible? error? secret? trim
+  └─ finalize          (code)         compression, name, thumbnail, meta.json → Documents
 ```
 
-- Un sous-agent seulement là où il faut du jugement. Le nommage, la compression et le rangement sont du code : déterministes et gratuits.
-- Un seul navigateur, détenu par le serveur MCP : ce qui est filmé est exactement ce qui a été piloté.
-- La prise se joue d'un seul tenant côté serveur (`run_storyboard`) : pas de temps morts liés à la réflexion du modèle, et les états brefs comme un toast de 2 s sont attrapés.
-- Une capture via CDP `Page.startScreencast`, identique pour un Chromium lancé et pour un onglet de ton Chrome.
-- Une boucle de relecture : au plus 2 nouvelles prises si la vidéo ne montre pas la fonctionnalité.
-- Un rendu de démo : faux curseur visible, effet au clic, légendes en bandeau, overlays de dev masqués (Next, Vite, devtools).
+- A subagent only where judgment is needed. Naming, compression and filing are code: deterministic and free.
+- One browser, owned by the MCP server: what is recorded is exactly what was driven.
+- The take runs in one go on the server (`run_storyboard`): no dead time while the model thinks, and short states such as a 2 s toast are caught.
+- Capture through CDP `Page.startScreencast`, the same for a launched Chromium and for a tab of your Chrome.
+- A review loop: up to 2 retakes when the video does not show the feature.
+- A demo look: visible fake cursor, click ripple, caption banners, dev overlays hidden (Next, Vite, devtools).
 
-## Installation (une fois par machine)
+## Installation (once per machine)
 
-Prérequis : Node 20 ou plus, et Claude Code. ffmpeg est fourni par `ffmpeg-static`. Google Chrome est utilisé s'il est installé, sinon le Chromium de Playwright est téléchargé. Sous Linux sans Chrome, Chromium a besoin de bibliothèques système : lance une fois `sudo npx playwright install-deps chromium`.
+Requirements: Node 20 or later, and Claude Code. ffmpeg comes from `ffmpeg-static`. Google Chrome is used when installed; otherwise Playwright's Chromium is downloaded. On Linux without Chrome, Chromium needs system libraries: run `sudo npx playwright install-deps chromium` once.
 
 ```bash
-git clone <ce dépôt> ~/screencaster          # ou copie le dossier
-node ~/screencaster/scripts/setup.mjs         # npm install + build (+ Chromium si pas de Chrome)
-claude plugin marketplace add ~/screencaster
+claude plugin marketplace add vladnacht/screencaster
 claude plugin install screencaster@screencaster
 ```
 
-Relance Claude Code. Le serveur `demo-capture` démarre avec le plugin. Si `setup.mjs` n'a pas été lancé, le serveur s'installe tout seul au premier démarrage (quelques secondes), puis le premier `/screencaster` télécharge ffmpeg, et Chromium si Chrome est absent (environ une minute).
+Restart Claude Code. The `demo-capture` server starts with the plugin and installs itself on first start (a few seconds). The first `/screencaster` then downloads ffmpeg, and Chromium when Chrome is missing (about a minute). To do all of it up front, run `node scripts/setup.mjs` from a clone of this repository.
 
-## Filmer un onglet de ton Chrome
+## Recording a tab of your Chrome
 
-Chrome n'autorise le pilotage à distance que sur un **profil dédié**. Lance-le avec :
+Chrome only allows remote control on a **dedicated profile**. Start it with:
 
 ```bash
-~/screencaster/scripts/chrome-debug.sh                       # macOS / Linux
+scripts/chrome-debug.sh                                          # macOS / Linux
 powershell -ExecutionPolicy Bypass -File scripts\chrome-debug.ps1   # Windows
 ```
 
-Le profil est gardé dans `~/.screencaster/chrome-profile` : connecte-toi une fois à tes sites dans cette fenêtre, la session est conservée. Ouvre ensuite l'onglet à filmer, puis lance `/screencaster …`. Quand l'agent se détache, l'onglet reste ouvert.
+`/screencaster` gives you the full path of the script when it needs it. The profile is kept in `~/.screencaster/chrome-profile`: sign in to your sites once in that window and the session is kept. Then open the tab to record and run `/screencaster …`. When the agent detaches, the tab stays open.
 
-## Comptes de test
+## Test accounts
 
-Le serveur lit les identifiants et les tape directement dans la page. Ils ne passent jamais par le modèle, les logs ou `meta.json`. Sources, par ordre de priorité :
+The server reads the credentials and types them straight into the page. They never go through the model, the logs or `meta.json`. Sources, in order of priority:
 
-1. Variable d'environnement `SCREENCASTER_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
-2. `<projet>/.screencaster/accounts.json` (même format ; pense à l'ajouter à `.gitignore`)
+1. Environment variable `SCREENCASTER_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
+2. `<project>/.screencaster/accounts.json` (same format; add it to `.gitignore`)
 3. `~/.screencaster/accounts.json`
-4. Ou des clés d'un fichier `.env` du projet (`envFile` + `userKey` + `passKey`), que le resolver repère par leur **nom**.
+4. Or keys from a project `.env` file (`envFile` + `userKey` + `passKey`), which the resolver finds by their **name**.
 
-## Sorties
+## Output
 
 ```
 ~/Documents/Demos/acme-shop/2026-10-27/
   2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
   2026-10-27_1432_acme-shop_export-csv_video_1440x900.poster.png
-  2026-10-27_1432_acme-shop_export-csv_video_1440x900.meta.json   (étapes horodatées, durée, poids, verdict QA)
+  2026-10-27_1432_acme-shop_export-csv_video_1440x900.meta.json   (timed steps, length, size, QA verdict)
   2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
 ```
 
-**Poids** : une vidéo ne dépasse **jamais 10 Mo**, quelle que soit sa durée. H.264 CRF 28 à 15 fps, largeur plafonnée à 1280 px, sans audio, `faststart`. Une démo de 30 s pèse en général quelques centaines de Ko. Si le fichier dépasse le plafond (8 Mo par défaut, réglable jusqu'à 10 Mo, compatible avec un upload dans une PR GitHub), il est ré-encodé en 2 passes au débit qui tient. Si ça ne suffit pas, le débit, la résolution (jusqu'à 320 px) et le fps (jusqu'à 5) baissent par paliers. Si même ça ne passe pas (plusieurs heures de vidéo), `finalize` échoue plutôt que de livrer un fichier trop lourd.
+**Size**: a video is **never larger than 10 MB**, whatever its length. H.264 CRF 28 at 15 fps, width capped at 1280 px, no audio, `faststart`. A 30 s demo usually weighs a few hundred KB. If the file goes over the cap (8 MB by default, up to 10 MB, small enough to upload to a GitHub pull request), it is re-encoded in 2 passes at a bitrate that fits. If that is not enough, bitrate, resolution (down to 320 px) and frame rate (down to 5 fps) step down. If even that fails (hours of video), `finalize` stops rather than deliver a file that is too large.
 
-## Options et variables
+## Options and settings
 
-| `/screencaster` | Effet |
+| `/screencaster` | Effect |
 |---|---|
-| `--video` / `--shot` | force le mode (sinon le planner choisit) |
-| `--mkv` | conteneur MKV au lieu de MP4 |
-| `--max-mb N` | plafond de poids de la vidéo (10 Mo au maximum) |
-| `--mobile` | viewport 390×844 |
-| `--headed` | navigateur visible pendant la prise |
+| `--video` / `--shot` | force the mode (otherwise the planner decides) |
+| `--mkv` | MKV container instead of MP4 |
+| `--max-mb N` | video size cap (10 MB at most) |
+| `--mobile` | 390×844 viewport |
+| `--headed` | browser visible while recording |
 
-| Variable | Défaut |
+| Variable | Default |
 |---|---|
 | `SCREENCASTER_OUTPUT_DIR` | `~/Documents/Demos` |
-| `SCREENCASTER_MAX_MB` | `8` (plafonné à 10) |
+| `SCREENCASTER_MAX_MB` | `8` (capped at 10) |
 | `SCREENCASTER_CDP_URL` | `http://127.0.0.1:9222` |
-| `SCREENCASTER_STEP_PAUSE_MS` | `600` (pause après chaque action) |
-| `SCREENCASTER_FFMPEG` | ffmpeg-static, sinon `ffmpeg` du PATH |
-| `SCREENCASTER_CHROME`, `SCREENCASTER_CHROME_PROFILE` | pour `chrome-debug` |
+| `SCREENCASTER_STEP_PAUSE_MS` | `600` (pause after each action) |
+| `SCREENCASTER_FFMPEG` | ffmpeg-static, else `ffmpeg` on PATH |
+| `SCREENCASTER_CHROME`, `SCREENCASTER_CHROME_PROFILE` | for `chrome-debug` |
 
-## Développement
+## Development
 
 ```bash
-cd mcp/demo-capture && npm test     # nommage, dossier Documents, poids, 2 passes, plafond de 10 Mo
-node scripts/e2e.mjs                # navigateur lancé : enregistrement, capture, finalisation
-node scripts/e2e-chrome.mjs         # onglet Chrome attaché : liste, ambiguïté, détachement
+node scripts/setup.mjs              # install, build, ffmpeg, browser
+cd mcp/demo-capture && npm test     # naming, Documents folder, size, 2 passes, 10 MB cap
+node scripts/e2e.mjs                # launched browser: recording, screenshot, finalize
+node scripts/e2e-chrome.mjs         # attached Chrome tab: listing, ambiguity, detach
 ```
 
-Outils MCP exposés : `run_storyboard` (la prise complète), `check_setup`, `list_targets`, `list_accounts`, `open_target`, `snapshot`, `navigate`, `click`, `hover`, `type`, `press`, `scroll`, `wait_for`, `login`, `start_recording`, `mark_step`, `stop_recording`, `screenshot`, `extract_frames`, `finalize`, `close_target`.
+The CI runs all of the above on Linux, macOS and Windows, plus a Linux job without Chrome.
+
+MCP tools: `run_storyboard` (the whole take), `check_setup`, `list_targets`, `list_accounts`, `open_target`, `snapshot`, `navigate`, `click`, `hover`, `type`, `press`, `scroll`, `wait_for`, `login`, `start_recording`, `mark_step`, `stop_recording`, `screenshot`, `extract_frames`, `finalize`, `close_target`.
+
+## License
+
+MIT
