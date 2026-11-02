@@ -53,7 +53,7 @@ export const stepSchema = z.object({
   fullPage: z.boolean().optional(),
   pressEnter: z.boolean().optional(),
   clear: z.boolean().optional(),
-  label: z.string().optional().describe("Intitulé du chapitre dans meta.json"),
+  label: z.string().optional().describe("Intitulé de l'étape dans le résultat de finalize"),
   caption: z.string().nullable().optional().describe("Bandeau affiché à partir de cette étape ; null l'efface"),
   recorded: z.boolean().optional().describe("false : exécutée avant le début de l'enregistrement (login)"),
   expect: z.object({ ...target, timeoutMs: z.number().optional() }).optional().describe("Élément à attendre après l'action"),

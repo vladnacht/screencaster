@@ -40,8 +40,6 @@ You are the reviewer. You actually look at the images and give a verdict. You re
   "retakeHints": ["wait for the table to finish loading before clicking"],
   "trimStart": 0.4,
   "trimEnd": 21.0,
-  "posterAt": 19.2,
   "secretsVisible": false
 }
 ```
-`posterAt`: the instant that best sums up the demo, usually the final result.

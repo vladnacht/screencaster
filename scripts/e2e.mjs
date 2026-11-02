@@ -59,19 +59,19 @@ assert.ok(frames.every((f) => fs.statSync(f.file).size > 1000));
 
 
 const video = await call("finalize", {
-  kind: "video", project: "Demo App", featureSlug: "Créer un contact", description: "Création d'un contact avec toast",
-  trimStart: 0.3, qa: { verdict: "ok", issues: [] },
+  kind: "video", project: "Demo App", featureSlug: "Créer un contact", trimStart: 0.3,
 });
 console.log("finalize video", video);
 assert.match(path.basename(video.file), /^\d{4}-\d{2}-\d{2}_\d{4}_demo-app_creer-un-contact_video_1440x900\.mp4$/);
 assert.ok(fs.statSync(video.file).size < 8 * 1024 * 1024);
-assert.ok(fs.existsSync(video.poster) && fs.existsSync(video.meta));
-const meta = JSON.parse(fs.readFileSync(video.meta, "utf8"));
-assert.equal(meta.steps.length, 4);
+assert.equal(path.basename(path.dirname(video.file)), "videos");
+assert.deepEqual(fs.readdirSync(path.dirname(video.file)), [path.basename(video.file)], "only the video, no sidecar file");
+assert.equal(video.steps.length, 4);
 
-const shots = await call("finalize", { kind: "shot", project: "Demo App", featureSlug: "contact-saved", description: "Liste après ajout" });
+const shots = await call("finalize", { kind: "shot", project: "Demo App", featureSlug: "contact-saved" });
 console.log("finalize shot", shots);
 assert.match(path.basename(shots.files[0].file), /_demo-app_contact-saved_shot_1440x900\.png$/);
+assert.equal(path.basename(path.dirname(shots.files[0].file)), "images");
 
 // A failing step stops the recording and reports the step with a page snapshot.
 const bad = await call("run_storyboard", { steps: [{ n: 7, action: "click", selector: "#does-not-exist" }], holdMs: 0 });

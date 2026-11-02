@@ -59,8 +59,9 @@ export function outputRoot(dir: string | undefined = process.env.SCREENCASTER_OU
   return path.join(home, "Documents", "Demos");
 }
 
-export function outputDir(project: string, date: Date = new Date(), root: string = outputRoot()): string {
-  return path.join(root, slugify(project), formatDate(date));
+/** `<root>/<project>/<date>/videos` or `…/images`: only the media files, nothing else. */
+export function outputDir(project: string, kind: MediaKind, date: Date = new Date(), root: string = outputRoot()): string {
+  return path.join(root, slugify(project), formatDate(date), kind === "video" ? "videos" : "images");
 }
 
 /** True when `file` is inside `dir`, symlinks resolved; both must exist. */
