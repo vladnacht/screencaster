@@ -12,7 +12,7 @@ Plugin Claude Code qui produit, à partir d'une simple description, **une vidéo
 /screencaster parcours d'inscription en mobile --mobile --max-mb 5
 ```
 
-Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Windows et Linux. Ils ne sont jamais écrits dans le dépôt. L'agent répond dans la langue dans laquelle tu lui écris.
+Les vidéos vont dans **`~/Documents/Demos/<projet>/<date>/videos/`** et les captures dans **`…/images/`**, sur macOS, Windows et Linux. Ils ne sont jamais écrits dans le dépôt. L'agent répond dans la langue dans laquelle tu lui écris.
 
 ## Fonctionnalités
 
@@ -42,12 +42,12 @@ Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Wind
 **Contrôle qualité**
 - Un relecteur regarde des images de la vidéo. Il vérifie que la fonctionnalité est visible et qu'il n'y a ni erreur, ni page de login inattendue, ni secret lisible.
 - Au plus 2 nouvelles prises si la vidéo ne convient pas. Une vidéo qui montre un secret n'est jamais livrée.
-- Coupe automatique des temps morts au début et à la fin, et choix de la vignette.
+- Coupe automatique des temps morts au début et à la fin.
 
 **Fichiers produits**
 - MP4 (ou MKV avec `--mkv`) léger, **jamais plus de 10 Mo** quelle que soit la durée, et PNG optimisés.
-- Nom déterministe (date, heure, projet, fonctionnalité, type, dimensions), vignette `.poster.png` et `.meta.json` (étapes horodatées, durée, poids, verdict de la relecture).
-- Rangés dans `~/Documents/Demos/<projet>/<date>/` sur macOS, Windows et Linux, jamais dans le dépôt.
+- Nom déterministe (date, heure, projet, fonctionnalité, type, dimensions).
+- Vidéos dans `~/Documents/Demos/<projet>/<date>/videos/`, captures dans `…/images/`, sur macOS, Windows et Linux, jamais dans le dépôt. Rien d'autre n'y est écrit : ni vignette, ni fichier annexe.
 
 ## Comment ça marche
 
@@ -57,7 +57,7 @@ Les fichiers vont dans **`~/Documents/Demos/<projet>/<date>/`**, sur macOS, Wind
   ├─ demo-planner      (sonnet)       vidéo ou screenshot, storyboard avec vrais sélecteurs, slug du nom
   ├─ capture-operator  (sonnet)       exécute le storyboard via le serveur MCP demo-capture
   ├─ media-reviewer    (sonnet)       regarde les images : fonctionnalité visible ? erreur ? secret ? coupe
-  └─ finalize          (code)         compression, nom, vignette, meta.json → Documents
+  └─ finalize          (code)         compression, nom → Documents (videos/ ou images/)
 ```
 
 - Chaque sous-agent n'a que les outils dont il a besoin : aucun ne peut lancer de commande, écrire de fichier ni naviguer sur le web, donc une page piégée ne peut pas leur faire agir sur ta machine.
@@ -74,7 +74,7 @@ Rien n'est envoyé à l'auteur du plugin : pas de télémétrie, pas de serveur.
 
 - **Réseau** : le navigateur charge les pages que tu demandes de filmer, avec leurs propres requêtes. `check_url` envoie un GET à ton serveur de dev pour voir s'il répond. Au premier démarrage, le plugin télécharge ses paquets npm (`npm ci`, fixés par `package-lock.json`), le binaire ffmpeg de `ffmpeg-static` depuis ses releases GitHub, et le Chromium de Playwright seulement si Chrome est absent.
 - **Identifiants** : les comptes de test sont lus dans `SCREENCASTER_ACCOUNTS`, `.screencaster/accounts.json` ou un fichier `.env` du projet, et tapés seulement sur une app locale ou une origine que tu as listée (voir [Comptes de test](#comptes-de-test)). Ils ne sont jamais envoyés ailleurs, ni journalisés, ni écrits dans un fichier.
-- **Stocké sur ta machine** : vidéos, captures, vignettes et `meta.json` dans `~/Documents/Demos`. Ils montrent ce qu'affiche la page filmée, données personnelles comprises. Les enregistrements bruts restent dans un dossier temporaire supprimé à l'arrêt du serveur.
+- **Stocké sur ta machine** : seulement les vidéos et les captures, dans `~/Documents/Demos`. Ils montrent ce qu'affiche la page filmée, données personnelles comprises. Les enregistrements bruts restent dans un dossier temporaire supprimé à l'arrêt du serveur.
 
 ## Installation (une fois par machine)
 
@@ -100,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File scripts\chrome-debug.ps1   # Windows
 
 ## Comptes de test
 
-Le serveur lit les identifiants et les tape directement dans la page. Ils ne passent jamais par le modèle, les logs ou `meta.json`. Sources, par ordre de priorité :
+Le serveur lit les identifiants et les tape directement dans la page. Ils ne passent jamais par le modèle, les logs ou les fichiers produits. Sources, par ordre de priorité :
 
 1. Variable d'environnement `SCREENCASTER_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
 2. `<projet>/.screencaster/accounts.json` (même format ; pense à l'ajouter à `.gitignore`)
@@ -113,10 +113,10 @@ Les identifiants ne sont tapés que sur une app locale (`localhost`, `127.0.0.1`
 
 ```
 ~/Documents/Demos/acme-shop/2026-10-27/
-  2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
-  2026-10-27_1432_acme-shop_export-csv_video_1440x900.poster.png
-  2026-10-27_1432_acme-shop_export-csv_video_1440x900.meta.json   (étapes horodatées, durée, poids, verdict QA)
-  2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
+  videos/
+    2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
+  images/
+    2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
 ```
 
 **Poids** : une vidéo ne dépasse **jamais 10 Mo**, quelle que soit sa durée. H.264 CRF 28 à 15 fps, largeur plafonnée à 1280 px, sans audio, `faststart`. Une démo de 30 s pèse en général quelques centaines de Ko. Si le fichier dépasse le plafond (8 Mo par défaut, réglable jusqu'à 10 Mo, compatible avec un upload dans une PR GitHub), il est ré-encodé en 2 passes au débit qui tient. Si ça ne suffit pas, le débit, la résolution (jusqu'à 320 px) et le fps (jusqu'à 5) baissent par paliers. Si même ça ne passe pas (plusieurs heures de vidéo), `finalize` échoue plutôt que de livrer un fichier trop lourd.

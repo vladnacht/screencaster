@@ -40,13 +40,13 @@ Pass description, plan and capture.
 - Still `retake` after 2 retakes: finalize anyway, and list the remaining problems clearly.
 
 ## 5. Finalize (`finalize` tool, no subagent)
-- Video: `kind: "video"`, `project` = `target.project`, `featureSlug` = `plan.featureSlug`, `description`, `format`, `maxMb`, `trimStart`, `trimEnd` and `posterAt` (copied as is from the reviewer: they refer to the raw recording), `qa: { verdict, issues }`.
-- Screenshots: `kind: "shot"` with the same `project` / `featureSlug`, and `rawFiles` = `capture.rawShots`.
+- Video: `kind: "video"`, `project` = `target.project`, `featureSlug` = `plan.featureSlug`, `format`, `maxMb`, `trimStart` and `trimEnd` (copied as is from the reviewer: they refer to the raw recording). It goes to `…/<project>/<date>/videos/`.
+- Screenshots: `kind: "shot"` with the same `project` / `featureSlug`, and `rawFiles` = `capture.rawShots`. They go to `…/<project>/<date>/images/`.
 - `both` mode: both calls.
 - Then `close_target`.
 
 ## 6. Report
-For each file, give in a few lines the full path (in `~/Documents/Demos/…` or `$SCREENCASTER_OUTPUT_DIR`), the size, the length, the thumbnail and any problem the review raised. In a git repository on a feature branch, offer to attach the video or screenshots to the pull request. The repository is never an output location.
+For each file, give in a few lines the full path (in `~/Documents/Demos/…` or `$SCREENCASTER_OUTPUT_DIR`), the size, the length and any problem the review raised. Only the video or image files are written: no sidecar file. In a git repository on a feature branch, offer to attach the video or screenshots to the pull request. The repository is never an output location.
 
 ## Rules
 - Subagents run with the Agent tool, `subagent_type` = `screencaster:<name>`, one after the other: each step depends on the previous one.

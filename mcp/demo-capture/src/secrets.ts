@@ -5,7 +5,7 @@ import { isInside } from "./naming.js";
 
 /**
  * Test accounts for `login`. Values are read here and typed straight into the page:
- * they never go back to the model, into meta.json or into logs. Tools only ever
+ * they never go back to the model, into output files or into logs. Tools only ever
  * return account *names* and where they came from.
  */
 export interface Account {

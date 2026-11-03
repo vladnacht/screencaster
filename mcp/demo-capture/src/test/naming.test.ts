@@ -29,7 +29,8 @@ test("output root is <home>/Documents/Demos on every platform, overridable", () 
     assert.equal(outputRoot(undefined, home), path.join(home, "Documents", "Demos"));
   }
   assert.equal(outputRoot("/tmp/out", "/Users/ada"), path.resolve("/tmp/out"));
-  assert.equal(outputDir("Mon Blog", date, "/r"), path.join("/r", "mon-blog", "2026-10-27"));
+  assert.equal(outputDir("Mon Blog", "video", date, "/r"), path.join("/r", "mon-blog", "2026-10-27", "videos"));
+  assert.equal(outputDir("Mon Blog", "shot", date, "/r"), path.join("/r", "mon-blog", "2026-10-27", "images"));
 });
 
 test("uniquePath appends _2, _3 on collision", () => {

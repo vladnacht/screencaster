@@ -8,7 +8,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import * as act from "./actions.js";
 import { DEFAULT_CDP_URL, listChromeTabs, Session, toUrl } from "./browser.js";
-import { checkFfmpeg, defaultVideoOptions, encodeVideo, extractFrames, extractPoster, optimizePng } from "./encode.js";
+import { checkFfmpeg, defaultVideoOptions, encodeVideo, extractFrames, optimizePng } from "./encode.js";
 import { buildBaseName, isInside, outputDir, outputRoot, uniquePath } from "./naming.js";
 import { DEFAULT_HIDE_SELECTORS } from "./overlay.js";
 import { Recorder, type Step } from "./recorder.js";
@@ -19,7 +19,7 @@ import { describeStep, login, runStep, stepSchema, type LoginRef, type StoryStep
 
 let session: Session | undefined;
 let recorder: Recorder | undefined;
-let lastRecording: { file: string; durationSec: number; steps: Step[]; viewport: { width: number; height: number }; url: string } | undefined;
+let lastRecording: { file: string; durationSec: number; steps: Step[]; viewport: { width: number; height: number } } | undefined;
 let shots: string[] = [];
 const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "screencaster-"));
 
@@ -81,7 +81,7 @@ async function stopRecording() {
   recorder = undefined;
   await act.caption(page(), null);
   const res = await r.stop();
-  lastRecording = { ...res, viewport: session!.viewport, url: page().url() };
+  lastRecording = { ...res, viewport: session!.viewport };
   return { rawFile: res.file, durationSec: res.durationSec, steps: res.steps };
 }
 
@@ -96,7 +96,7 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.4.0" });
+const server = new McpServer({ name: "demo-capture", version: "0.5.0" });
 
 server.registerTool(
   "check_setup",
@@ -409,38 +409,25 @@ server.registerTool(
   "finalize",
   {
     description:
-      "Compresse, nomme et range la démo dans Documents/Demos/<projet>/<date>/ avec une vignette et un .meta.json. kind=video : dernier enregistrement. kind=shot : captures de la session (ou rawFiles).",
+      "Compresse, nomme et range la démo dans Documents/Demos/<projet>/<date>/videos/ (kind=video : dernier enregistrement) ou …/images/ (kind=shot : captures de la session, ou rawFiles). Seuls les fichiers vidéo ou image y sont écrits.",
     inputSchema: {
       kind: z.enum(["video", "shot"]),
       project: z.string().describe("Nom court du projet ou du site"),
       featureSlug: z.string().describe("Ce que montre la démo, en kebab-case : export-csv, onboarding-step-2"),
-      description: z.string(),
       rawFiles: z.array(z.string()).optional(),
       format: z.enum(["mp4", "mkv"]).default("mp4"),
       maxMb: z.number().positive().optional().describe("Plafond de poids en Mo (8 par défaut, jamais plus de 10)"),
       trimStart: z.number().min(0).optional(),
       trimEnd: z.number().min(0).optional(),
-      posterAt: z.number().min(0).optional().describe("Instant (s) de la vignette sur l'enregistrement brut ; défaut : dernière étape"),
-      qa: z.object({ verdict: z.string(), issues: z.array(z.string()).default([]) }).optional(),
     },
   },
   tool(async (a: {
-    kind: "video" | "shot"; project: string; featureSlug: string; description: string; rawFiles?: string[];
-    format: "mp4" | "mkv"; maxMb?: number; trimStart?: number; trimEnd?: number; posterAt?: number;
-    qa?: { verdict: string; issues: string[] };
+    kind: "video" | "shot"; project: string; featureSlug: string; rawFiles?: string[];
+    format: "mp4" | "mkv"; maxMb?: number; trimStart?: number; trimEnd?: number;
   }) => {
     const now = new Date();
-    const dir = outputDir(a.project, now);
+    const dir = outputDir(a.project, a.kind, now);
     fs.mkdirSync(dir, { recursive: true });
-    const meta: Record<string, unknown> = {
-      description: a.description,
-      project: a.project,
-      feature: a.featureSlug,
-      kind: a.kind,
-      createdAt: now.toISOString(),
-      url: session?.page.url() ?? lastRecording?.url,
-      qa: a.qa,
-    };
 
     if (a.kind === "video") {
       const raw = a.rawFiles?.[0] ? ownFile(a.rawFiles[0]) : lastRecording?.file;
@@ -451,20 +438,9 @@ server.registerTool(
       const opts = { ...defaultVideoOptions(), format: a.format, trimStart: a.trimStart, trimEnd: a.trimEnd };
       if (a.maxMb) opts.maxMb = a.maxMb;
       const enc = await encodeVideo(raw, out, opts);
-      const stem = out.slice(0, -(a.format.length + 1));
+      // Step times on the trimmed video, returned for the report instead of a sidecar file.
       const steps = (lastRecording?.steps ?? []).map((s) => ({ ...s, t: Number((s.t - (a.trimStart ?? 0)).toFixed(2)) }));
-      // posterAt, like trimStart/trimEnd, is on the raw recording's timeline.
-      const posterAt =
-        a.posterAt !== undefined
-          ? a.posterAt - (a.trimStart ?? 0)
-          : steps.length ? steps[steps.length - 1].t + 0.8 : enc.durationSec * 0.7;
-      const poster = await extractPoster(out, `${stem}.poster.png`, Math.min(Math.max(0, posterAt), enc.durationSec - 0.1));
-      Object.assign(meta, {
-        file: path.basename(out), viewport: vp, durationSec: Number(enc.durationSec.toFixed(2)),
-        sizeBytes: enc.sizeBytes, encoding: { passes: enc.passes, maxMb: enc.maxMb, fps: enc.fps, maxWidth: enc.width }, steps,
-      });
-      fs.writeFileSync(`${stem}.meta.json`, JSON.stringify(meta, null, 2));
-      return { file: out, size: human(enc.sizeBytes), durationSec: meta.durationSec, poster, meta: `${stem}.meta.json`, passes: enc.passes };
+      return { file: out, size: human(enc.sizeBytes), durationSec: Number(enc.durationSec.toFixed(2)), passes: enc.passes, steps };
     }
 
     const raws = a.rawFiles?.length ? a.rawFiles.map(ownFile) : shots;
@@ -478,14 +454,10 @@ server.registerTool(
       });
       const out = uniquePath(dir, base, "png");
       const size = await optimizePng(raw, out);
-      files.push({ file: out, size: human(size), sizeBytes: size, ...dim });
+      files.push({ file: out, size: human(size), ...dim });
     }
-    // Named after the first PNG, which uniquePath already made unique: a second batch in the same minute keeps its own meta.
-    const stem = files[0].file.slice(0, -".png".length);
-    Object.assign(meta, { files: files.map((f) => ({ file: path.basename(f.file), sizeBytes: f.sizeBytes, width: f.width, height: f.height })) });
-    fs.writeFileSync(`${stem}.meta.json`, JSON.stringify(meta, null, 2));
     shots = [];
-    return { files: files.map(({ file, size, width, height }) => ({ file, size, width, height })), meta: `${stem}.meta.json` };
+    return { files };
   }),
 );
 

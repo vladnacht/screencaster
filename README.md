@@ -12,7 +12,7 @@ A Claude Code plugin that turns a plain description into **a lightweight demo vi
 /screencaster the sign-up flow on mobile --mobile --max-mb 5
 ```
 
-Files go to **`~/Documents/Demos/<project>/<date>/`** on macOS, Windows and Linux. They are never written into your repository. The agent answers in the language you write in.
+Videos go to **`~/Documents/Demos/<project>/<date>/videos/`** and screenshots to **`…/images/`**, on macOS, Windows and Linux. They are never written into your repository. The agent answers in the language you write in.
 
 ## Features
 
@@ -42,12 +42,12 @@ Files go to **`~/Documents/Demos/<project>/<date>/`** on macOS, Windows and Linu
 **Quality check**
 - A reviewer looks at frames from the video. It checks that the feature is visible and that there is no error, no unexpected sign-in page and no readable secret.
 - Up to 2 retakes when the video is not right. A video that shows a secret is never delivered.
-- Dead time at the start and end is trimmed, and the poster frame is chosen.
+- Dead time at the start and end is trimmed.
 
 **Output files**
 - Lightweight MP4 (or MKV with `--mkv`), **never more than 10 MB** whatever the length, and optimized PNGs.
-- Deterministic name (date, time, project, feature, kind, size), a `.poster.png` thumbnail and a `.meta.json` (timed steps, length, size, review verdict).
-- Stored in `~/Documents/Demos/<project>/<date>/` on macOS, Windows and Linux, never in the repository.
+- Deterministic name (date, time, project, feature, kind, size).
+- Videos in `~/Documents/Demos/<project>/<date>/videos/`, screenshots in `…/images/`, on macOS, Windows and Linux, never in the repository. Nothing else is written there: no thumbnail, no sidecar file.
 
 ## How it works
 
@@ -57,7 +57,7 @@ Files go to **`~/Documents/Demos/<project>/<date>/`** on macOS, Windows and Linu
   ├─ demo-planner      (sonnet)       video or screenshot, storyboard with real selectors, name slug
   ├─ capture-operator  (sonnet)       runs the storyboard through the demo-capture MCP server
   ├─ media-reviewer    (sonnet)       looks at the frames: feature visible? error? secret? trim
-  └─ finalize          (code)         compression, name, thumbnail, meta.json → Documents
+  └─ finalize          (code)         compression, name → Documents (videos/ or images/)
 ```
 
 - Each subagent gets only the tools it needs: none can run shell commands, write files or browse the web, so a page with hidden instructions cannot make them act on your machine.
@@ -74,7 +74,7 @@ Nothing is sent to the plugin's author: there is no telemetry and no backend.
 
 - **Network**: the browser loads the pages you ask to record, with their own requests. `check_url` sends one GET to your dev server to see if it answers. On first start the plugin downloads its npm packages (`npm ci`, pinned by `package-lock.json`), the ffmpeg binary of `ffmpeg-static` from its GitHub releases, and Playwright's Chromium only when Chrome is missing.
 - **Credentials**: test accounts are read from `SCREENCASTER_ACCOUNTS`, `.screencaster/accounts.json` or a project `.env` file, and typed only on a local app or an origin you listed (see [Test accounts](#test-accounts)). They are never sent anywhere else, logged or written to a file.
-- **Stored on your machine**: videos, screenshots, thumbnails and `meta.json` in `~/Documents/Demos`. They show whatever the recorded page shows, personal data included. Raw recordings sit in a temporary folder that is deleted when the server stops.
+- **Stored on your machine**: only the videos and screenshots, in `~/Documents/Demos`. They show whatever the recorded page shows, personal data included. Raw recordings sit in a temporary folder that is deleted when the server stops.
 
 ## Installation (once per machine)
 
@@ -100,7 +100,7 @@ powershell -ExecutionPolicy Bypass -File scripts\chrome-debug.ps1   # Windows
 
 ## Test accounts
 
-The server reads the credentials and types them straight into the page. They never go through the model, the logs or `meta.json`. Sources, in order of priority:
+The server reads the credentials and types them straight into the page. They never go through the model, the logs or the output files. Sources, in order of priority:
 
 1. Environment variable `SCREENCASTER_ACCOUNTS='{"admin":{"username":"…","password":"…"}}'`
 2. `<project>/.screencaster/accounts.json` (same format; add it to `.gitignore`)
@@ -113,10 +113,10 @@ Credentials are typed only on a local app (`localhost`, `127.0.0.1`, `*.localhos
 
 ```
 ~/Documents/Demos/acme-shop/2026-10-27/
-  2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
-  2026-10-27_1432_acme-shop_export-csv_video_1440x900.poster.png
-  2026-10-27_1432_acme-shop_export-csv_video_1440x900.meta.json   (timed steps, length, size, QA verdict)
-  2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
+  videos/
+    2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
+  images/
+    2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
 ```
 
 **Size**: a video is **never larger than 10 MB**, whatever its length. H.264 CRF 28 at 15 fps, width capped at 1280 px, no audio, `faststart`. A 30 s demo usually weighs a few hundred KB. If the file goes over the cap (8 MB by default, up to 10 MB, small enough to upload to a GitHub pull request), it is re-encoded in 2 passes at a bitrate that fits. If that is not enough, bitrate, resolution (down to 320 px) and frame rate (down to 5 fps) step down. If even that fails (hours of video), `finalize` stops rather than deliver a file that is too large.
