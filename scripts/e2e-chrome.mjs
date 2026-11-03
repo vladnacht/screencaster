@@ -71,12 +71,12 @@ try {
   await call("wait_for", { ms: 800 });
   const rec = await call("stop_recording");
   assert.ok(rec.durationSec > 1);
-  const video = await call("finalize", { kind: "video", project: "chrome tab", featureSlug: "contacts-tab" });
+  const video = await call("finalize", { kind: "video", project: "chrome tab", title: "onglet contacts défilement" });
   console.log("finalize video", video);
   assert.ok(fs.statSync(video.file).size > 1000);
 
   await call("screenshot", {});
-  const shot = await call("finalize", { kind: "shot", project: "chrome tab", featureSlug: "contacts-tab" });
+  const shot = await call("finalize", { kind: "shot", project: "chrome tab", title: "onglet contacts" });
   console.log("finalize shot", shot.files);
 
   await call("close_target");

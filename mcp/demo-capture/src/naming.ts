@@ -4,27 +4,15 @@ import path from "node:path";
 
 export type MediaKind = "video" | "shot";
 
-export interface NameParts {
-  project: string;
-  featureSlug: string;
-  kind: MediaKind;
-  width: number;
-  height: number;
-  ext: string;
-  /** 1-based index when several screenshots belong to the same demo. */
-  index?: number;
-  date?: Date;
-}
-
-/** Lowercase kebab-case, ASCII only, max 48 chars. */
-export function slugify(input: string): string {
+/** Lowercase kebab-case, ASCII only, `max` chars at most. */
+export function slugify(input: string, max = 48): string {
   const slug = input
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 48)
+    .slice(0, max)
     .replace(/-+$/g, "");
   return slug || "demo";
 }
@@ -35,19 +23,12 @@ export function formatDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** `<YYYY-MM-DD>_<HHmm>_<project>_<feature>_<video|shot>[_<n>]_<WxH>` (no extension). */
-export function buildBaseName(p: NameParts): string {
-  const d = p.date ?? new Date();
-  const parts = [
-    formatDate(d),
-    `${pad(d.getHours())}${pad(d.getMinutes())}`,
-    slugify(p.project),
-    slugify(p.featureSlug),
-    p.kind,
-  ];
-  if (p.index !== undefined) parts.push(String(p.index));
-  parts.push(`${Math.round(p.width)}x${Math.round(p.height)}`);
-  return parts.join("_");
+/**
+ * The file name, without extension: only the explicit title, since the folder already
+ * holds the project, the date and the media type. `index` numbers screenshots of one take.
+ */
+export function buildBaseName(title: string, index?: number): string {
+  return index === undefined ? slugify(title, 80) : `${slugify(title, 80)}-${index}`;
 }
 
 /**
