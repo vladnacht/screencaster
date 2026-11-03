@@ -15,7 +15,7 @@ function tools(agent: string): string[] {
 
 test("subagents that read untrusted pages get no shell, no writes and no web", () => {
   const serverTools = [...fs.readFileSync(path.join(root, "mcp", "demo-capture", "src", "server.ts"), "utf8").matchAll(/registerTool\(\s*"(\w+)"/g)].map((m) => m[1]);
-  for (const agent of ["target-resolver", "demo-planner", "capture-operator", "media-reviewer"]) {
+  for (const agent of ["target-resolver", "demo-planner", "capture-operator", "media-reviewer", "media-namer"]) {
     for (const t of tools(agent)) {
       assert.ok(!/^(Bash|Write|Edit|NotebookEdit|WebFetch|WebSearch|Agent|\*)/.test(t), `${agent} must not get ${t}`);
       if (t.startsWith(MCP) && !t.endsWith("*")) assert.ok(serverTools.includes(t.slice(MCP.length)), `${agent}: unknown tool ${t}`);
@@ -23,4 +23,5 @@ test("subagents that read untrusted pages get no shell, no writes and no web", (
   }
   assert.deepEqual(tools("capture-operator"), [`${MCP}*`]);
   assert.deepEqual(tools("media-reviewer"), ["Read", `${MCP}extract_frames`]);
+  assert.deepEqual(tools("media-namer"), ["Read", `${MCP}extract_frames`]);
 });

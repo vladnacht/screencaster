@@ -59,18 +59,18 @@ assert.ok(frames.every((f) => fs.statSync(f.file).size > 1000));
 
 
 const video = await call("finalize", {
-  kind: "video", project: "Demo App", featureSlug: "Créer un contact", trimStart: 0.3,
+  kind: "video", project: "Demo App", title: "Créer un contact et voir la confirmation", trimStart: 0.3,
 });
 console.log("finalize video", video);
-assert.match(path.basename(video.file), /^\d{4}-\d{2}-\d{2}_\d{4}_demo-app_creer-un-contact_video_1440x900\.mp4$/);
+assert.equal(path.basename(video.file), "creer-un-contact-et-voir-la-confirmation.mp4");
 assert.ok(fs.statSync(video.file).size < 8 * 1024 * 1024);
 assert.equal(path.basename(path.dirname(video.file)), "videos");
 assert.deepEqual(fs.readdirSync(path.dirname(video.file)), [path.basename(video.file)], "only the video, no sidecar file");
 assert.equal(video.steps.length, 4);
 
-const shots = await call("finalize", { kind: "shot", project: "Demo App", featureSlug: "contact-saved" });
+const shots = await call("finalize", { kind: "shot", project: "Demo App", title: "liste des contacts après ajout" });
 console.log("finalize shot", shots);
-assert.match(path.basename(shots.files[0].file), /_demo-app_contact-saved_shot_1440x900\.png$/);
+assert.match(path.basename(shots.files[0].file), /^liste-des-contacts-apres-ajout(-1)?\.png$/);
 assert.equal(path.basename(path.dirname(shots.files[0].file)), "images");
 
 // A failing step stops the recording and reports the step with a page snapshot.
@@ -79,11 +79,11 @@ assert.equal(bad.status, "failed");
 assert.equal(bad.failedStep.n, 7);
 assert.match(bad.failedStep.snapshot, /URL:/);
 assert.ok(bad.rawVideo, "recording must be stopped and returned on failure");
-await call("finalize", { kind: "shot", project: "Demo App", featureSlug: "skip", description: "flush" }).catch(() => {});
+await call("finalize", { kind: "shot", project: "Demo App", title: "skip" }).catch(() => {});
 
 // Same name a second time → collision suffix.
 await call("screenshot", {});
-const again = await call("finalize", { kind: "shot", project: "Demo App", featureSlug: "contact-saved", description: "x" });
+const again = await call("finalize", { kind: "shot", project: "Demo App", title: "liste des contacts après ajout" });
 assert.notEqual(again.files[0].file, shots.files[0].file);
 
 await call("close_target");

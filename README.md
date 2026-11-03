@@ -46,7 +46,7 @@ Videos go to **`~/Documents/Demos/<project>/<date>/videos/`** and screenshots to
 
 **Output files**
 - Lightweight MP4 (or MKV with `--mkv`), **never more than 10 MB** whatever the length, and optimized PNGs.
-- Deterministic name (date, time, project, feature, kind, size).
+- An explicit title as the file name, chosen by a naming agent from what the video or screenshot actually shows, in the language you write in (`espace-pro-ajouter-un-client-confirmation.mp4`). The folder already holds the project and the date.
 - Videos in `~/Documents/Demos/<project>/<date>/videos/`, screenshots in `…/images/`, on macOS, Windows and Linux, never in the repository. Nothing else is written there: no thumbnail, no sidecar file.
 
 ## How it works
@@ -54,14 +54,15 @@ Videos go to **`~/Documents/Demos/<project>/<date>/videos/`** and screenshots to
 ```
 /screencaster "<description>"          orchestrator skill
   ├─ target-resolver   (haiku)        what to record: a Chrome tab or the app URL, test account
-  ├─ demo-planner      (sonnet)       video or screenshot, storyboard with real selectors, name slug
+  ├─ demo-planner      (sonnet)       video or screenshot, storyboard with real selectors
   ├─ capture-operator  (sonnet)       runs the storyboard through the demo-capture MCP server
   ├─ media-reviewer    (sonnet)       looks at the frames: feature visible? error? secret? trim
+  ├─ media-namer       (haiku)        explicit file title from what the result shows
   └─ finalize          (code)         compression, name → Documents (videos/ or images/)
 ```
 
 - Each subagent gets only the tools it needs: none can run shell commands, write files or browse the web, so a page with hidden instructions cannot make them act on your machine.
-- A subagent only where judgment is needed. Naming, compression and filing are code: deterministic and free.
+- A subagent only where judgment is needed: choosing the title needs to look at the result. Compression, filing and collision suffixes are code: deterministic and free.
 - One browser, owned by the MCP server: what is recorded is exactly what was driven.
 - The take runs in one go on the server (`run_storyboard`): no dead time while the model thinks, and short states such as a 2 s toast are caught.
 - Capture through CDP `Page.startScreencast`, the same for a launched Chromium and for a tab of your Chrome.
@@ -114,9 +115,9 @@ Credentials are typed only on a local app (`localhost`, `127.0.0.1`, `*.localhos
 ```
 ~/Documents/Demos/acme-shop/2026-10-27/
   videos/
-    2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
+    export-csv-des-commandes-filtrees.mp4
   images/
-    2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
+    commandes-filtrees-avant-export.png
 ```
 
 **Size**: a video is **never larger than 10 MB**, whatever its length. H.264 CRF 28 at 15 fps, width capped at 1280 px, no audio, `faststart`. A 30 s demo usually weighs a few hundred KB. If the file goes over the cap (8 MB by default, up to 10 MB, small enough to upload to a GitHub pull request), it is re-encoded in 2 passes at a bitrate that fits. If that is not enough, bitrate, resolution (down to 320 px) and frame rate (down to 5 fps) step down. If even that fails (hours of video), `finalize` stops rather than deliver a file that is too large.

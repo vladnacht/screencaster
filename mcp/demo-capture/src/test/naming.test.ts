@@ -13,15 +13,12 @@ test("slugify strips accents, symbols and length", () => {
   assert.ok(slugify("a".repeat(100)).length <= 48);
 });
 
-test("buildBaseName follows date_time_project_feature_kind[_n]_WxH", () => {
-  assert.equal(
-    buildBaseName({ project: "Acme Shop", featureSlug: "export-csv", kind: "video", width: 1440, height: 900, ext: "mp4", date }),
-    "2026-10-27_1432_acme-shop_export-csv_video_1440x900",
-  );
-  assert.equal(
-    buildBaseName({ project: "acme-shop", featureSlug: "x", kind: "shot", width: 390, height: 844, ext: "png", index: 2, date }),
-    "2026-10-27_1432_acme-shop_x_shot_2_390x844",
-  );
+test("buildBaseName is only the explicit title, numbered for a set of screenshots", () => {
+  assert.equal(buildBaseName("Espace pro : ajouter un client et voir la confirmation"), "espace-pro-ajouter-un-client-et-voir-la-confirmation");
+  assert.equal(buildBaseName("liste des projets filtrée", 2), "liste-des-projets-filtree-2");
+  // Long titles are cut to 80 characters, without a trailing hyphen.
+  const long = buildBaseName("tableau de bord ".repeat(10));
+  assert.ok(long.length <= 80 && !long.endsWith("-"), long);
 });
 
 test("output root is <home>/Documents/Demos on every platform, overridable", () => {

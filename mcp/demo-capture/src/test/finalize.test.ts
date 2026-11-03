@@ -29,7 +29,7 @@ test("finalize writes only images into images/, and ffmpeg tools refuse files th
     assert.ok(!opened.isError, opened.text);
     const finalize = async () => {
       assert.ok(!(await call("screenshot", {})).isError);
-      const r = await call("finalize", { kind: "shot", project: "p", featureSlug: "f" });
+      const r = await call("finalize", { kind: "shot", project: "p", title: "page de test" });
       assert.ok(!r.isError, r.text);
       return (JSON.parse(r.text) as { files: { file: string }[] }).files[0].file;
     };
@@ -43,7 +43,7 @@ test("finalize writes only images into images/, and ffmpeg tools refuse files th
     assert.deepEqual(fs.readdirSync(path.dirname(imagesDir)), ["images"]);
     // A model-given path (local file or URL) never reaches ffmpeg.
     for (const file of [outside, "http://127.0.0.1:9/playlist.m3u8"]) {
-      const shot = await call("finalize", { kind: "shot", project: "p", featureSlug: "f", rawFiles: [file] });
+      const shot = await call("finalize", { kind: "shot", project: "p", title: "page de test", rawFiles: [file] });
       assert.ok(shot.isError && shot.text.includes("Fichier refusé"), shot.text);
       const frames = await call("extract_frames", { file });
       assert.ok(frames.isError && frames.text.includes("Fichier refusé"), frames.text);

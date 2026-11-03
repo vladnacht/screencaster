@@ -19,7 +19,7 @@ import { describeStep, login, runStep, stepSchema, type LoginRef, type StoryStep
 
 let session: Session | undefined;
 let recorder: Recorder | undefined;
-let lastRecording: { file: string; durationSec: number; steps: Step[]; viewport: { width: number; height: number } } | undefined;
+let lastRecording: { file: string; durationSec: number; steps: Step[] } | undefined;
 let shots: string[] = [];
 const runDir = fs.mkdtempSync(path.join(os.tmpdir(), "screencaster-"));
 
@@ -81,7 +81,7 @@ async function stopRecording() {
   recorder = undefined;
   await act.caption(page(), null);
   const res = await r.stop();
-  lastRecording = { ...res, viewport: session!.viewport };
+  lastRecording = res;
   return { rawFile: res.file, durationSec: res.durationSec, steps: res.steps };
 }
 
@@ -96,7 +96,7 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.5.0" });
+const server = new McpServer({ name: "demo-capture", version: "0.6.0" });
 
 server.registerTool(
   "check_setup",
@@ -413,7 +413,7 @@ server.registerTool(
     inputSchema: {
       kind: z.enum(["video", "shot"]),
       project: z.string().describe("Nom court du projet ou du site"),
-      featureSlug: z.string().describe("Ce que montre la démo, en kebab-case : export-csv, onboarding-step-2"),
+      title: z.string().describe("Titre explicite de ce que montre le média, dans la langue de la demande ; devient le nom du fichier"),
       rawFiles: z.array(z.string()).optional(),
       format: z.enum(["mp4", "mkv"]).default("mp4"),
       maxMb: z.number().positive().optional().describe("Plafond de poids en Mo (8 par défaut, jamais plus de 10)"),
@@ -422,7 +422,7 @@ server.registerTool(
     },
   },
   tool(async (a: {
-    kind: "video" | "shot"; project: string; featureSlug: string; rawFiles?: string[];
+    kind: "video" | "shot"; project: string; title: string; rawFiles?: string[];
     format: "mp4" | "mkv"; maxMb?: number; trimStart?: number; trimEnd?: number;
   }) => {
     const now = new Date();
@@ -432,9 +432,7 @@ server.registerTool(
     if (a.kind === "video") {
       const raw = a.rawFiles?.[0] ? ownFile(a.rawFiles[0]) : lastRecording?.file;
       if (!raw) throw new Error("Aucun enregistrement à finaliser.");
-      const vp = lastRecording?.viewport ?? session?.viewport ?? { width: 1440, height: 900 };
-      const base = buildBaseName({ project: a.project, featureSlug: a.featureSlug, kind: "video", ...vp, ext: a.format, date: now });
-      const out = uniquePath(dir, base, a.format);
+      const out = uniquePath(dir, buildBaseName(a.title), a.format);
       const opts = { ...defaultVideoOptions(), format: a.format, trimStart: a.trimStart, trimEnd: a.trimEnd };
       if (a.maxMb) opts.maxMb = a.maxMb;
       const enc = await encodeVideo(raw, out, opts);
@@ -448,11 +446,7 @@ server.registerTool(
     const files = [];
     for (const [i, raw] of raws.entries()) {
       const dim = pngSize(raw);
-      const base = buildBaseName({
-        project: a.project, featureSlug: a.featureSlug, kind: "shot", ...dim, ext: "png", date: now,
-        index: raws.length > 1 ? i + 1 : undefined,
-      });
-      const out = uniquePath(dir, base, "png");
+      const out = uniquePath(dir, buildBaseName(a.title, raws.length > 1 ? i + 1 : undefined), "png");
       const size = await optimizePng(raw, out);
       files.push({ file: out, size: human(size), ...dim });
     }

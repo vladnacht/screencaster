@@ -46,7 +46,7 @@ Les vidéos vont dans **`~/Documents/Demos/<projet>/<date>/videos/`** et les cap
 
 **Fichiers produits**
 - MP4 (ou MKV avec `--mkv`) léger, **jamais plus de 10 Mo** quelle que soit la durée, et PNG optimisés.
-- Nom déterministe (date, heure, projet, fonctionnalité, type, dimensions).
+- Un titre explicite comme nom de fichier, choisi par un agent de nommage d'après ce que la vidéo ou la capture montre vraiment, dans la langue de ta demande (`espace-pro-ajouter-un-client-confirmation.mp4`). Le dossier donne déjà le projet et la date.
 - Vidéos dans `~/Documents/Demos/<projet>/<date>/videos/`, captures dans `…/images/`, sur macOS, Windows et Linux, jamais dans le dépôt. Rien d'autre n'y est écrit : ni vignette, ni fichier annexe.
 
 ## Comment ça marche
@@ -54,14 +54,15 @@ Les vidéos vont dans **`~/Documents/Demos/<projet>/<date>/videos/`** et les cap
 ```
 /screencaster "<description>"                 skill orchestrateur
   ├─ target-resolver   (haiku)        quoi filmer : onglet Chrome ou URL de l'app, compte de test
-  ├─ demo-planner      (sonnet)       vidéo ou screenshot, storyboard avec vrais sélecteurs, slug du nom
+  ├─ demo-planner      (sonnet)       vidéo ou screenshot, storyboard avec vrais sélecteurs
   ├─ capture-operator  (sonnet)       exécute le storyboard via le serveur MCP demo-capture
   ├─ media-reviewer    (sonnet)       regarde les images : fonctionnalité visible ? erreur ? secret ? coupe
+  ├─ media-namer       (haiku)        titre explicite du fichier, d'après ce que montre le résultat
   └─ finalize          (code)         compression, nom → Documents (videos/ ou images/)
 ```
 
 - Chaque sous-agent n'a que les outils dont il a besoin : aucun ne peut lancer de commande, écrire de fichier ni naviguer sur le web, donc une page piégée ne peut pas leur faire agir sur ta machine.
-- Un sous-agent seulement là où il faut du jugement. Le nommage, la compression et le rangement sont du code : déterministes et gratuits.
+- Un sous-agent seulement là où il faut du jugement : choisir le titre demande de regarder le résultat. La compression, le rangement et les suffixes de doublon sont du code : déterministes et gratuits.
 - Un seul navigateur, détenu par le serveur MCP : ce qui est filmé est exactement ce qui a été piloté.
 - La prise se joue d'un seul tenant côté serveur (`run_storyboard`) : pas de temps morts liés à la réflexion du modèle, et les états brefs comme un toast de 2 s sont attrapés.
 - Une capture via CDP `Page.startScreencast`, identique pour un Chromium lancé et pour un onglet de ton Chrome.
@@ -114,9 +115,9 @@ Les identifiants ne sont tapés que sur une app locale (`localhost`, `127.0.0.1`
 ```
 ~/Documents/Demos/acme-shop/2026-10-27/
   videos/
-    2026-10-27_1432_acme-shop_export-csv_video_1440x900.mp4
+    export-csv-des-commandes-filtrees.mp4
   images/
-    2026-10-27_1435_acme-shop_export-csv_shot_1440x900.png
+    commandes-filtrees-avant-export.png
 ```
 
 **Poids** : une vidéo ne dépasse **jamais 10 Mo**, quelle que soit sa durée. H.264 CRF 28 à 15 fps, largeur plafonnée à 1280 px, sans audio, `faststart`. Une démo de 30 s pèse en général quelques centaines de Ko. Si le fichier dépasse le plafond (8 Mo par défaut, réglable jusqu'à 10 Mo, compatible avec un upload dans une PR GitHub), il est ré-encodé en 2 passes au débit qui tient. Si ça ne suffit pas, le débit, la résolution (jusqu'à 320 px) et le fps (jusqu'à 5) baissent par paliers. Si même ça ne passe pas (plusieurs heures de vidéo), `finalize` échoue plutôt que de livrer un fichier trop lourd.
