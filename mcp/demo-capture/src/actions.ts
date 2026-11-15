@@ -85,10 +85,18 @@ export async function caption(page: Page, text: string | null): Promise<void> {
     .catch(() => {});
 }
 
-/** Calls a `window.__demo` overlay method in the page (a no-op where the overlay is missing). */
+/**
+ * Calls a `window.__demo` overlay method in the page: a no-op where there is no overlay at all,
+ * an error where an older overlay lacks the method (the step would otherwise silently do nothing).
+ */
 function overlay(page: Page, method: string, ...args: unknown[]): Promise<unknown> {
   return page.evaluate(
-    ({ method, args }) => (window as unknown as { __demo?: Record<string, (...a: unknown[]) => unknown> }).__demo?.[method]?.(...args),
+    ({ method, args }) => {
+      const demo = (window as unknown as { __demo?: Record<string, (...a: unknown[]) => unknown> }).__demo;
+      if (!demo) return undefined;
+      if (typeof demo[method] !== "function") throw new Error("Overlay de démo obsolète dans cet onglet : recharge-le.");
+      return demo[method](...args);
+    },
     { method, args },
   );
 }

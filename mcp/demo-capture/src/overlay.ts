@@ -35,10 +35,14 @@ export interface Box {
  * serialises it. Every overlay hangs off `documentElement`, outside the zoomed `body`.
  */
 export function DEMO_INIT_SCRIPT({ hideSelectors }: { hideSelectors: string[] }): void {
-  const w = window as unknown as { __demo?: unknown };
-  if (w.__demo) return;
+  // Bumped when `window.__demo` gains methods: a tab still holding an older overlay
+  // (attached Chrome, injected by a previous version) gets the new one instead of keeping it.
+  const VERSION = 2;
+  const w = window as unknown as { __demo?: { version?: number; [method: string]: unknown } };
+  if (w.__demo?.version === VERSION) return;
 
   const install = () => {
+    for (const id of ["__demo-cursor", "__demo-caption", "__demo-card"]) document.getElementById(id)?.remove();
     const style = document.createElement("style");
     style.textContent = `
       ${hideSelectors.join(",")} { display: none !important; }
@@ -107,25 +111,34 @@ export function DEMO_INIT_SCRIPT({ hideSelectors }: { hideSelectors: string[] })
       parent.append(el);
       return el;
     };
-    // Current zoom: screen = a + s * p, p being a point of the unzoomed viewport.
-    let zoom = { s: 1, ax: 0, ay: 0, tx: 0, ty: 0 };
+    // Current zoom of body (transform-origin 0 0): scale s, translate t.
+    let zoom = { s: 1, tx: 0, ty: 0 };
 
+    // Read live, since any scroll moves body: its zoomed top-left corner r sits at O + t, O being
+    // the unzoomed one, and an on-screen point maps back to O + (point - r) / s.
+    const bodyOrigin = () => {
+      const r = document.body.getBoundingClientRect();
+      return { left: r.left, top: r.top, ox: r.left - zoom.tx, oy: r.top - zoom.ty };
+    };
+
+    /** Zooms to scale s so that an unzoomed viewport point p shows at a + s * p. */
     const setZoom = async (s: number, ax: number, ay: number, ms: number) => {
       const body = document.body;
-      // Unzoomed top-left of body: with transform-origin 0 0, its corner sits at O + t.
-      const r = body.getBoundingClientRect();
-      const ox = r.left - zoom.tx;
-      const oy = r.top - zoom.ty;
+      const { ox, oy } = bodyOrigin();
       const tx = ax + (s - 1) * ox;
       const ty = ay + (s - 1) * oy;
       body.style.transformOrigin = "0 0";
       body.style.transition = `transform ${ms}ms ease-in-out`;
       body.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
-      zoom = { s, ax, ay, tx, ty };
+      zoom = { s, tx, ty };
       await wait(ms);
+      // The transition may still be a frame short: cancelling it snaps to the final transform.
+      body.style.transition = "none";
     };
 
     w.__demo = {
+      version: VERSION,
+
       caption(text: string | null) {
         caption.textContent = text ?? "";
         caption.classList.toggle("on", !!text);
@@ -184,8 +197,9 @@ export function DEMO_INIT_SCRIPT({ hideSelectors }: { hideSelectors: string[] })
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         // Target centre in unzoomed coordinates, sent toward the viewport centre.
-        const cx = (box.x + box.width / 2 - zoom.ax) / zoom.s;
-        const cy = (box.y + box.height / 2 - zoom.ay) / zoom.s;
+        const o = bodyOrigin();
+        const cx = o.ox + (box.x + box.width / 2 - o.left) / zoom.s;
+        const cy = o.oy + (box.y + box.height / 2 - o.top) / zoom.s;
         // Clamped so the zoomed page still covers the whole viewport.
         const clamp = (v: number, size: number) => Math.min(0, Math.max(size * (1 - s), v));
         return setZoom(s, clamp(vw / 2 - s * cx, vw), clamp(vh / 2 - s * cy, vh), ms);
@@ -196,8 +210,11 @@ export function DEMO_INIT_SCRIPT({ hideSelectors }: { hideSelectors: string[] })
        * pan the zoom onto it. Returns true when the page moved.
        */
       async reveal(box: Box) {
-        const inside = box.x >= 0 && box.y >= 0 && box.x + box.width <= window.innerWidth && box.y + box.height <= window.innerHeight;
-        if (zoom.s === 1 || inside) return false;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const inside = box.x >= 0 && box.y >= 0 && box.x + box.width <= vw && box.y + box.height <= vh;
+        // A target larger than the viewport never fits: panning before each action would only jitter.
+        if (zoom.s === 1 || inside || box.width > vw || box.height > vh) return false;
         await (w.__demo as { zoom(b: Box, s: number, ms: number): Promise<void> }).zoom(box, zoom.s, 400);
         return true;
       },

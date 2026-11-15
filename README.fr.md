@@ -90,6 +90,10 @@ Chaque étape a une `action`. Une cible se donne par `selector`, ou `text`, ou `
 
 `highlight` sur `click`, `type` ou `hover` vaut `true` ou `{ label?, color?, ms? }` : un cadre arrondi autour de l'élément, maintenu `ms` (900) avant l'action et retiré 400 ms après.
 
+Limites connues de `zoom` :
+- Le zoom est une transformation CSS sur `body`, qui devient alors le bloc conteneur des éléments `position: fixed` de l'app : en-têtes, modales et toasts bougent et grossissent avec le zoom.
+- `unzoom` retire les `transform`, `transform-origin` et `transition` en ligne de `body`, y compris ceux que l'app y avait mis elle-même.
+
 ```json
 [
   { "action": "card", "kicker": "Partie 2 · RBCG", "title": "Le contrôle budgétaire", "bullets": ["Imputation automatique", "Alerte si dépassement"], "ms": 4000 },

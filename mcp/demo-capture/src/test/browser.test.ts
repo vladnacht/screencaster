@@ -6,6 +6,7 @@ import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import * as act from "../actions.js";
 import { Session, toUrl } from "../browser.js";
+import { DEMO_INIT_SCRIPT } from "../overlay.js";
 import { runStep } from "../storyboard.js";
 
 test("toUrl keeps URLs and escapes local paths", () => {
@@ -108,4 +109,46 @@ test("zoom magnifies toward the centre, clicks still land, unzoom returns to 1x,
   await runStep(p, { action: "unzoom", ms: 200 }, ctx);
   assert.equal(await p.evaluate(() => getComputedStyle(document.body).transform), "none");
   assert.deepEqual(await rect("#go"), before);
+});
+
+test("zoom stays anchored after a scroll, skips panning on a large target, and navigate resets it", async () => {
+  const p = session.page;
+  const transform = () => p.evaluate(() => document.body.style.transform);
+  await p.evaluate(() => { document.body.style.height = "3000px"; });
+  try {
+    await runStep(p, { action: "zoom", selector: "#name", scale: 2, ms: 100 }, ctx);
+    assert.ok(centreDist(await rect("#name")) < 3, "centred on first zoom");
+    await p.evaluate(() => window.scrollBy(0, 200));
+    await runStep(p, { action: "zoom", selector: "#name", scale: 2, ms: 100 }, ctx);
+    const r = await rect("#name");
+    assert.ok(centreDist(r) < 3, `re-zoom after scroll lands centred, got ${JSON.stringify(r)}`);
+
+    // A target larger than the viewport is never "inside" it: no pan before acting.
+    await p.evaluate(() => {
+      const big = document.createElement("div");
+      big.id = "big";
+      big.style.cssText = "position:absolute;left:0;top:0;width:780px;height:3000px";
+      document.body.prepend(big);
+    });
+    const zoomed = await transform();
+    await act.highlight(p, { selector: "#big" });
+    assert.equal(await transform(), zoomed, "no pan on a target larger than the viewport");
+    await act.unhighlight(p);
+
+    await runStep(p, { action: "navigate", url: "#reset" }, ctx);
+    assert.equal(await p.evaluate(() => getComputedStyle(document.body).transform), "none");
+  } finally {
+    await act.unzoom(p, 0);
+    await p.evaluate(() => { document.getElementById("big")?.remove(); document.body.style.removeProperty("height"); window.scrollTo(0, 0); });
+  }
+});
+
+test("a stale overlay from an older version is refused, and re-injecting the script replaces it", async () => {
+  const p = session.page;
+  await p.evaluate(() => { (window as unknown as { __demo: unknown }).__demo = { caption() {} }; });
+  await assert.rejects(act.card(p, { title: "x" }, 0), /obsolète/);
+  await p.evaluate(DEMO_INIT_SCRIPT, { hideSelectors: [] });
+  await act.card(p, { title: "x" }, 0);
+  assert.equal(await p.locator("#__demo-cursor").count(), 1);
+  assert.equal(await p.locator("#__demo-caption").count(), 1);
 });

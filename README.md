@@ -90,6 +90,10 @@ Each step has an `action`. A target is `selector`, or `text`, or `role` + `name`
 
 `highlight` on `click`, `type` or `hover` is `true` or `{ label?, color?, ms? }`: a rounded frame around the element, held `ms` (900) before acting and removed 400 ms after.
 
+Known limits of `zoom`:
+- The zoom is a CSS transform on `body`, which makes `body` the containing block of the app's `position: fixed` elements: headers, modals and toasts move and scale with the zoom.
+- `unzoom` removes the inline `transform`, `transform-origin` and `transition` of `body`, including any the app had set there itself.
+
 ```json
 [
   { "action": "card", "kicker": "Part 2 · Budget", "title": "Budget check", "bullets": ["Automatic allocation", "Alert on overrun"], "ms": 4000 },
