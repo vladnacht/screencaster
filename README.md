@@ -26,7 +26,7 @@ Videos go to **`~/Documents/Demos/<project>/<date>/videos/`** and screenshots to
 - `--video` or `--shot` forces the mode.
 
 **Demo script**
-- A storyboard written with the page's real selectors. Available actions: go to a URL, click, hover, type text, press a key, scroll, wait for an element, sign in, take a screenshot.
+- A storyboard written with the page's real selectors. Available actions: go to a URL, click, hover, type text, press a key, scroll, wait for an element, sign in, take a screenshot, plus explainer steps (white explainer pages, frames around the element acted on, zooms): see [Storyboard steps](#storyboard-steps).
 - Each step can carry a caption banner, and each action can wait for an element (a confirmation toast, for example).
 - The take is recorded in one go, with no dead time.
 - Irreversible actions (payment, sending, deleting) are flagged and need your approval.
@@ -36,7 +36,7 @@ Videos go to **`~/Documents/Demos/<project>/<date>/videos/`** and screenshots to
 - Credentials are read by the server and typed straight into the page: they never go through the model, the logs or the output files.
 
 **Demo look**
-- Visible fake cursor, click ripple, captions, dev overlays hidden (Next, Vite, devtools).
+- Visible fake cursor, click ripple, captions, explainer pages, highlight frames and zooms, dev overlays hidden (Next, Vite, devtools).
 - Desktop 1440×900, or mobile 390×844 with `--mobile`. `--headed` shows the browser while recording.
 
 **Quality check**
@@ -68,6 +68,38 @@ Videos go to **`~/Documents/Demos/<project>/<date>/videos/`** and screenshots to
 - Capture through CDP `Page.startScreencast`, the same for a launched Chromium and for a tab of your Chrome.
 - A review loop: up to 2 retakes when the video does not show the feature.
 - A demo look: visible fake cursor, click ripple, caption banners, dev overlays hidden (Next, Vite, devtools).
+
+## Storyboard steps
+
+Each step has an `action`. A target is `selector`, or `text`, or `role` + `name`. Every step takes `caption` (banner, `null` clears it), `label` and `expect` (element to wait for afterwards).
+
+| `action` | Fields |
+|---|---|
+| `navigate` | `url` |
+| `click`, `hover` | target, `highlight` |
+| `type` | target, `value` (typed text), `clear`, `pressEnter`, `highlight` |
+| `press` | `key` |
+| `scroll` | `dy`, or a target to scroll to |
+| `wait_for` | target and/or `ms` |
+| `screenshot` | optional target, `fullPage` |
+| `login` | `account`, or `envFile` + `userKey` + `passKey`; `recorded: false` to play it before recording |
+| `card` | `title` (required), `body` (line breaks allowed), `bullets`, `kicker` (small label above the title), `ms` (default 4000). A full-screen white page, faded in and out; caption and cursor are hidden meanwhile. |
+| `highlight` | target, `highlight: { label, color }`, `ms` (hold, default 900). Frames the element without acting. |
+| `zoom` | target, `scale` (1 to 3, default 1.8), `ms` (transition, default 600). Magnifies the page toward the element and stays zoomed; clicks and typing still land. Reset on `navigate` and `login`. |
+| `unzoom` | `ms` (default 600) |
+
+`highlight` on `click`, `type` or `hover` is `true` or `{ label?, color?, ms? }`: a rounded frame around the element, held `ms` (900) before acting and removed 400 ms after.
+
+```json
+[
+  { "action": "card", "kicker": "Part 2 · Budget", "title": "Budget check", "bullets": ["Automatic allocation", "Alert on overrun"], "ms": 4000 },
+  { "action": "type", "selector": "[name=amount]", "value": "150000", "highlight": { "label": "Amount" } },
+  { "action": "zoom", "selector": "[data-testid=total]", "scale": 2 },
+  { "action": "highlight", "selector": "[data-testid=total]", "ms": 1500 },
+  { "action": "unzoom" },
+  { "action": "click", "role": "button", "name": "Validate", "highlight": true, "expect": { "text": "Order validated" } }
+]
+```
 
 ## Network and data
 
@@ -153,7 +185,7 @@ node scripts/e2e-chrome.mjs         # attached Chrome tab: listing, ambiguity, d
 
 The CI runs all of the above on Linux, macOS and Windows, plus a Linux job without Chrome.
 
-MCP tools: `run_storyboard` (the whole take), `check_setup`, `list_targets`, `list_accounts`, `open_target`, `snapshot`, `navigate`, `click`, `hover`, `type`, `press`, `scroll`, `wait_for`, `login`, `start_recording`, `mark_step`, `stop_recording`, `screenshot`, `extract_frames`, `finalize`, `close_target`.
+MCP tools: `run_storyboard` (the whole take), `check_setup`, `list_targets`, `list_accounts`, `open_target`, `snapshot`, `navigate`, `click`, `hover`, `type`, `press`, `scroll`, `wait_for`, `card`, `highlight`, `zoom`, `unzoom`, `login`, `start_recording`, `mark_step`, `stop_recording`, `screenshot`, `extract_frames`, `finalize`, `close_target`.
 
 ## License
 

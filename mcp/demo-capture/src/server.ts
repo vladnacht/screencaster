@@ -13,7 +13,7 @@ import { buildBaseName, isInside, outputDir, outputRoot, uniquePath } from "./na
 import { DEFAULT_HIDE_SELECTORS } from "./overlay.js";
 import { Recorder, type Step } from "./recorder.js";
 import { listAccounts } from "./secrets.js";
-import { describeStep, login, runStep, stepSchema, type LoginRef, type StoryStep } from "./storyboard.js";
+import { describeStep, highlightSchema, login, runStep, stepSchema, type LoginRef, type StoryStep } from "./storyboard.js";
 
 // ---------- state: one browser session, one recording at a time ----------
 
@@ -96,7 +96,7 @@ async function takeShot(a: act.TargetRef & { fullPage?: boolean }): Promise<stri
 
 // ---------- server ----------
 
-const server = new McpServer({ name: "demo-capture", version: "0.6.0" });
+const server = new McpServer({ name: "demo-capture", version: "0.7.0" });
 
 server.registerTool(
   "check_setup",
@@ -200,6 +200,7 @@ server.registerTool(
   { description: "Va à une URL (absolue ou relative à la page).", inputSchema: { url: z.string() } },
   tool(async ({ url }: { url: string }) => {
     const p = page();
+    await act.unzoom(p, 0).catch(() => {});
     await p.goto(new URL(url, p.url()).toString(), { waitUntil: "load" });
     await act.settle(p);
     return { url: p.url(), title: await p.title() };
@@ -267,6 +268,58 @@ server.registerTool(
     const p = page();
     if (a.selector || a.text || a.role) await act.locate(p, a).waitFor({ state: a.state, timeout: a.timeoutMs });
     if (a.ms) await p.waitForTimeout(a.ms);
+    return "ok";
+  }),
+);
+
+server.registerTool(
+  "card",
+  {
+    description:
+      "Page blanche plein écran d'explication (titre, texte ou puces, petite étiquette au-dessus) : fondu, maintien `ms`, fondu. Masque le bandeau et le curseur pendant ce temps. Visible dans la vidéo.",
+    inputSchema: {
+      title: z.string(),
+      body: z.string().optional().describe("Texte, retours à la ligne permis"),
+      bullets: z.array(z.string()).optional(),
+      kicker: z.string().optional().describe("Petite étiquette au-dessus du titre, ex. « Partie 2 · RBCG »"),
+      ms: z.number().min(0).max(30_000).default(4000),
+    },
+  },
+  tool(async ({ ms, ...content }: { title: string; body?: string; bullets?: string[]; kicker?: string; ms: number }) => {
+    await act.card(page(), content, ms);
+    return "ok";
+  }),
+);
+
+server.registerTool(
+  "highlight",
+  {
+    description: "Encadre un élément d'un rectangle animé (étiquette facultative), le maintient `ms` puis l'enlève. N'agit pas sur l'élément.",
+    inputSchema: { ...targetRef, ...highlightSchema.shape, ms: z.number().min(0).default(900) },
+  },
+  tool(async (a: act.TargetRef & act.HighlightOptions) => {
+    await act.withHighlight(page(), a, a, async () => {});
+    return "ok";
+  }),
+);
+
+server.registerTool(
+  "zoom",
+  {
+    description: "Zoome en douceur sur un élément (vers le centre de l'écran) et reste zoomé ; les clics et la saisie restent justes. unzoom pour revenir.",
+    inputSchema: { ...targetRef, scale: z.number().min(1).max(3).default(1.8), ms: z.number().min(0).default(600) },
+  },
+  tool(async (a: act.TargetRef & { scale: number; ms: number }) => {
+    await act.zoom(page(), a, a.scale, a.ms);
+    return "ok";
+  }),
+);
+
+server.registerTool(
+  "unzoom",
+  { description: "Revient en douceur au zoom 1×.", inputSchema: { ms: z.number().min(0).default(600) } },
+  tool(async ({ ms }: { ms: number }) => {
+    await act.unzoom(page(), ms);
     return "ok";
   }),
 );

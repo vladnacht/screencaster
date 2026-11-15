@@ -21,6 +21,7 @@ export interface LoginRef {
 /** Fills the login form with a test account read server-side; values never leave this function. */
 export async function login(page: Page, projectDir: string, ref: LoginRef): Promise<void> {
   const acc = resolveAccount(projectDir, ref);
+  await act.unzoom(page, 0).catch(() => {});
   if (!loginAllowed(page.url(), acc)) {
     throw new Error(
       `Connexion refusée sur ${new URL(page.url()).origin} : les identifiants ne sont tapés que sur une app locale ou une origine listée (« origins » du compte dans accounts.json, ou SCREENCASTER_LOGIN_ORIGINS).`,
@@ -41,15 +42,27 @@ const target = {
   name: z.string().optional(),
 };
 
+export const highlightSchema = z.object({
+  label: z.string().optional().describe("Petite étiquette en haut à gauche du cadre"),
+  color: z.string().optional().describe("Couleur CSS du cadre (défaut : accent orange)"),
+  ms: z.number().min(0).optional().describe("Maintien avant l'action (défaut 900)"),
+});
+
 export const stepSchema = z.object({
   n: z.number().optional(),
-  action: z.enum(["navigate", "click", "type", "press", "hover", "scroll", "wait_for", "screenshot", "login"]),
+  action: z.enum(["navigate", "click", "type", "press", "hover", "scroll", "wait_for", "screenshot", "login", "card", "highlight", "zoom", "unzoom"]),
   ...target,
   value: z.string().optional().describe("Texte à taper (type)"),
   url: z.string().optional().describe("navigate"),
   key: z.string().optional().describe("press"),
   dy: z.number().optional().describe("scroll"),
-  ms: z.number().optional().describe("wait_for : pause fixe"),
+  ms: z.number().min(0).optional().describe("wait_for : pause fixe ; card : durée affichée (4000) ; highlight : maintien (900) ; zoom/unzoom : transition (600)"),
+  title: z.string().optional().describe("card : titre (requis)"),
+  body: z.string().optional().describe("card : texte, retours à la ligne permis"),
+  bullets: z.array(z.string()).optional().describe("card : puces"),
+  kicker: z.string().optional().describe("card : petite étiquette au-dessus du titre"),
+  scale: z.number().min(1).max(3).optional().describe("zoom : grossissement (1.8)"),
+  highlight: z.union([z.boolean(), highlightSchema]).optional().describe("click/type/hover/highlight : encadre la cible avant d'agir"),
   fullPage: z.boolean().optional(),
   pressEnter: z.boolean().optional(),
   clear: z.boolean().optional(),
@@ -61,14 +74,14 @@ export const stepSchema = z.object({
   envFile: z.string().optional(),
   userKey: z.string().optional(),
   passKey: z.string().optional(),
-});
+}).refine((s) => s.action !== "card" || !!s.title, { message: "card sans title", path: ["title"] });
 
 export type StoryStep = z.infer<typeof stepSchema>;
 
 const hasTarget = (t: act.TargetRef) => !!(t.selector || t.text || t.role);
 
 export function describeStep(s: StoryStep): string {
-  const t = s.name ?? s.text ?? s.selector ?? s.url ?? s.key ?? (s.ms ? `${s.ms} ms` : "");
+  const t = s.name ?? s.text ?? s.selector ?? s.title ?? s.url ?? s.key ?? (s.ms ? `${s.ms} ms` : "");
   return s.label ?? `${s.action}${t ? ` ${t}` : ""}`;
 }
 
@@ -79,20 +92,23 @@ export async function runStep(
   ctx: { projectDir: string; shot: (o: act.TargetRef & { fullPage?: boolean }) => Promise<string> },
 ): Promise<string | undefined> {
   let file: string | undefined;
+  const hl = s.highlight === true ? {} : s.highlight || undefined;
+  const lit = (action: () => Promise<void>) => (hl ? act.withHighlight(page, s, hl, action) : action());
   switch (s.action) {
     case "navigate":
       if (!s.url) throw new Error("navigate sans url");
+      await act.unzoom(page, 0).catch(() => {});
       await page.goto(new URL(s.url, page.url()).toString(), { waitUntil: "load" });
       await act.settle(page);
       break;
     case "click":
-      await act.click(page, s);
+      await lit(() => act.click(page, s));
       break;
     case "hover":
-      await act.hover(page, s);
+      await lit(() => act.hover(page, s));
       break;
     case "type":
-      await act.typeInto(page, s, s.value ?? "", { clear: s.clear, pressEnter: s.pressEnter });
+      await lit(() => act.typeInto(page, s, s.value ?? "", { clear: s.clear, pressEnter: s.pressEnter }));
       break;
     case "press":
       await page.keyboard.press(s.key ?? "Enter");
@@ -110,6 +126,19 @@ export async function runStep(
       break;
     case "login":
       await login(page, ctx.projectDir, s);
+      break;
+    case "card":
+      if (!s.title) throw new Error("card sans title");
+      await act.card(page, { title: s.title, body: s.body, bullets: s.bullets, kicker: s.kicker }, s.ms ?? 4000);
+      break;
+    case "highlight":
+      await act.withHighlight(page, s, { ...hl, ms: s.ms ?? hl?.ms }, async () => {});
+      break;
+    case "zoom":
+      await act.zoom(page, s, s.scale ?? 1.8, s.ms ?? 600);
+      break;
+    case "unzoom":
+      await act.unzoom(page, s.ms ?? 600);
       break;
   }
   if (s.expect && hasTarget(s.expect)) {
