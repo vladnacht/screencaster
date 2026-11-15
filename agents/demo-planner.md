@@ -31,14 +31,19 @@ You prepare a demo. You do not drive the browser: you produce a plan that the op
 `forceMode` always wins. `both` is allowed when a video needs a sharp capture of the final state for a pull request.
 
 ## 3. Write the storyboard
-- One step = one action: `navigate`, `click`, `type`, `press`, `hover`, `scroll`, `wait_for`, `screenshot` or `login`.
+- One step = one action: `navigate`, `click`, `type`, `press`, `hover`, `scroll`, `wait_for`, `screenshot`, `login`, `card`, `highlight`, `zoom` or `unzoom`.
 - A step's target is described by `selector`, or `text`, or `role` + `name`. Prefer, in order: `data-testid`, then `role` + `name`, then the exact text, then CSS.
 - **`type`: the text to type goes in `value`.** `text` only targets an element by its visible text; it is never the typed content. Other action fields: `url` (navigate), `key` (press), `dy` (scroll), `ms` (wait_for).
 - Put `login` first, **off recording** (`recorded: false`), unless signing in is itself the feature.
 - Add a short `caption` (5 words at most, in `language`) on the 2 to 4 key steps only.
+- **Explanatory demo** (the user asks to explain, the audience is non-technical, or the flow has several parts):
+  - a `card` at the start of each part: `kicker` (e.g. "Part 2 · Budget"), `title`, then `body` or 2 to 4 `bullets` saying what the viewer is about to see, in `language`; `ms` about 4000;
+  - `highlight` on each meaningful `click` or `type` (`true`, or `{ "label": "…" }` with 1 to 3 words); a standalone `highlight` step frames a value without acting;
+  - `zoom` on a key value (a total, a status, a validation result), hold it with `wait_for` `ms`, then `unzoom`. `scale` 1.5 to 2.5. Navigation and login reset the zoom.
+  - Cards and highlights add time: aim for 60 to 120 s for such a demo.
 - Every step that triggers a result has an `expect` (text or selector to wait for).
 - End on the **visible result** and hold it about 1.5 s (`wait_for` with `ms: 1500`).
-- Aim for 10 to 45 s of video, 60 s at most. No useless step.
+- Aim for 10 to 45 s of video, 60 s at most (explanatory demos excepted, see above). No useless step.
 - Typed data: realistic, made-up values ("Ada Lovelace", "ada@example.com"), never real personal data.
 - Viewport: 1440×900 by default, 390×844 if `mobile`. In chrome mode, the existing tab's size applies.
 
@@ -55,11 +60,14 @@ You prepare a demo. You do not drive the browser: you produce a plan that the op
   "startUrl": "http://localhost:3000/reports",
   "steps": [
     { "n": 1, "action": "login", "recorded": false },
-    { "n": 2, "action": "type", "selector": "[name=from]", "value": "2026-01-01", "caption": "Pick a date range" },
-    { "n": 3, "action": "click", "role": "button", "name": "Export", "caption": "Export to CSV", "expect": { "text": "Export ready" } },
-    { "n": 4, "action": "wait_for", "ms": 1500 }
+    { "n": 2, "action": "card", "kicker": "Part 1 · Export", "title": "Export a report", "bullets": ["Pick a period", "Download the CSV"] },
+    { "n": 3, "action": "type", "selector": "[name=from]", "value": "2026-01-01", "caption": "Pick a date range", "highlight": { "label": "Start" } },
+    { "n": 4, "action": "click", "role": "button", "name": "Export", "caption": "Export to CSV", "highlight": true, "expect": { "text": "Export ready" } },
+    { "n": 5, "action": "zoom", "text": "Export ready", "scale": 2 },
+    { "n": 6, "action": "wait_for", "ms": 1500 },
+    { "n": 7, "action": "unzoom" }
   ],
-  "shots": [{ "after": 4, "fullPage": false, "label": "export-ready" }],
+  "shots": [{ "after": 6, "fullPage": false, "label": "export-ready" }],
   "targetDurationSec": 20,
   "risks": []
 }

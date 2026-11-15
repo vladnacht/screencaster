@@ -26,7 +26,7 @@ Les vidéos vont dans **`~/Documents/Demos/<projet>/<date>/videos/`** et les cap
 - `--video` ou `--shot` force le mode.
 
 **Scénario de la démo**
-- Un storyboard écrit avec les vrais sélecteurs de la page. Actions possibles : aller à une URL, cliquer, survoler, taper du texte, appuyer sur une touche, défiler, attendre un élément, se connecter, prendre un screenshot.
+- Un storyboard écrit avec les vrais sélecteurs de la page. Actions possibles : aller à une URL, cliquer, survoler, taper du texte, appuyer sur une touche, défiler, attendre un élément, se connecter, prendre un screenshot, plus des étapes d'explication (pages blanches explicatives, cadres autour de l'élément manipulé, zooms) : voir [Étapes du storyboard](#étapes-du-storyboard).
 - Une légende en bandeau peut accompagner chaque étape, et chaque action peut attendre un élément (par exemple le toast de confirmation).
 - La prise se joue d'un seul tenant, sans temps morts.
 - Les actions irréversibles (paiement, envoi, suppression) sont signalées et demandent ton accord.
@@ -36,7 +36,7 @@ Les vidéos vont dans **`~/Documents/Demos/<projet>/<date>/videos/`** et les cap
 - Les identifiants sont lus par le serveur et tapés directement dans la page : ils ne passent jamais par le modèle, les logs ni les fichiers produits.
 
 **Rendu de démo**
-- Faux curseur visible, effet au clic, légendes, overlays de dev masqués (Next, Vite, devtools).
+- Faux curseur visible, effet au clic, légendes, pages d'explication, cadres de mise en évidence et zooms, overlays de dev masqués (Next, Vite, devtools).
 - Format bureau 1440×900, ou mobile 390×844 avec `--mobile`. `--headed` affiche le navigateur pendant la prise.
 
 **Contrôle qualité**
@@ -68,6 +68,42 @@ Les vidéos vont dans **`~/Documents/Demos/<projet>/<date>/videos/`** et les cap
 - Une capture via CDP `Page.startScreencast`, identique pour un Chromium lancé et pour un onglet de ton Chrome.
 - Une boucle de relecture : au plus 2 nouvelles prises si la vidéo ne montre pas la fonctionnalité.
 - Un rendu de démo : faux curseur visible, effet au clic, légendes en bandeau, overlays de dev masqués (Next, Vite, devtools).
+
+## Étapes du storyboard
+
+Chaque étape a une `action`. Une cible se donne par `selector`, ou `text`, ou `role` + `name`. Toute étape accepte `caption` (bandeau, `null` l'efface), `label` et `expect` (élément à attendre ensuite).
+
+| `action` | Champs |
+|---|---|
+| `navigate` | `url` |
+| `click`, `hover` | cible, `highlight` |
+| `type` | cible, `value` (texte tapé), `clear`, `pressEnter`, `highlight` |
+| `press` | `key` |
+| `scroll` | `dy`, ou une cible jusqu'où défiler |
+| `wait_for` | cible et/ou `ms` |
+| `screenshot` | cible facultative, `fullPage` |
+| `login` | `account`, ou `envFile` + `userKey` + `passKey` ; `recorded: false` pour la jouer avant l'enregistrement |
+| `card` | `title` (requis), `body` (retours à la ligne permis), `bullets`, `kicker` (petite étiquette au-dessus du titre), `ms` (4000 par défaut). Page blanche plein écran en fondu ; bandeau et curseur masqués pendant ce temps. |
+| `highlight` | cible, `highlight: { label, color }`, `ms` (maintien, 900 par défaut). Encadre l'élément sans agir. |
+| `zoom` | cible, `scale` (de 1 à 3, 1.8 par défaut), `ms` (transition, 600 par défaut). Grossit la page vers l'élément et reste zoomé ; clics et saisie restent justes. Remis à 1× par `navigate` et `login`. |
+| `unzoom` | `ms` (600 par défaut) |
+
+`highlight` sur `click`, `type` ou `hover` vaut `true` ou `{ label?, color?, ms? }` : un cadre arrondi autour de l'élément, maintenu `ms` (900) avant l'action et retiré 400 ms après.
+
+Limites connues de `zoom` :
+- Le zoom est une transformation CSS sur `body`, qui devient alors le bloc conteneur des éléments `position: fixed` de l'app : en-têtes, modales et toasts bougent et grossissent avec le zoom.
+- `unzoom` retire les `transform`, `transform-origin` et `transition` en ligne de `body`, y compris ceux que l'app y avait mis elle-même.
+
+```json
+[
+  { "action": "card", "kicker": "Partie 2 · RBCG", "title": "Le contrôle budgétaire", "bullets": ["Imputation automatique", "Alerte si dépassement"], "ms": 4000 },
+  { "action": "type", "selector": "[name=amount]", "value": "150000", "highlight": { "label": "Montant" } },
+  { "action": "zoom", "selector": "[data-testid=total]", "scale": 2 },
+  { "action": "highlight", "selector": "[data-testid=total]", "ms": 1500 },
+  { "action": "unzoom" },
+  { "action": "click", "role": "button", "name": "Valider", "highlight": true, "expect": { "text": "Ordre validé" } }
+]
+```
 
 ## Réseau et données
 
@@ -153,7 +189,7 @@ node scripts/e2e-chrome.mjs         # onglet Chrome attaché : liste, ambiguït�
 
 La CI lance tout cela sous Linux, macOS et Windows, plus un job Linux sans Chrome.
 
-Outils MCP exposés : `run_storyboard` (la prise complète), `check_setup`, `list_targets`, `list_accounts`, `open_target`, `snapshot`, `navigate`, `click`, `hover`, `type`, `press`, `scroll`, `wait_for`, `login`, `start_recording`, `mark_step`, `stop_recording`, `screenshot`, `extract_frames`, `finalize`, `close_target`.
+Outils MCP exposés : `run_storyboard` (la prise complète), `check_setup`, `list_targets`, `list_accounts`, `open_target`, `snapshot`, `navigate`, `click`, `hover`, `type`, `press`, `scroll`, `wait_for`, `card`, `highlight`, `zoom`, `unzoom`, `login`, `start_recording`, `mark_step`, `stop_recording`, `screenshot`, `extract_frames`, `finalize`, `close_target`.
 
 ## Licence
 
